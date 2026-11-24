@@ -5,6 +5,7 @@
 // apart from writing ClientAppSettings.json (mac_client.h).
 
 #include "desktop_entry.h"
+#include "theme.h"
 #include "chooser.h"
 #include "cube.h"
 #include "cpu_cores.h"
@@ -1153,6 +1154,7 @@ int main(int argc, char** argv) {
     keep_mangohud_out_of_this_process();
 
     QApplication app(argc, argv);
+    stud::ui::apply_launcher_theme(app);
     app.setWindowIcon(QIcon(":/stud-logo-color.png"));
     // Wayland finds the icon through app_id; the client reports the same id.
     QGuiApplication::setDesktopFileName(QStringLiteral(STUD_APP_ID));
@@ -1210,16 +1212,11 @@ int main(int argc, char** argv) {
     std::optional<QString> deep_link;
     std::optional<stud::ui::client::Product> product;
     if (argc > 1 && std::string(argv[1]) == "--roblox") product = stud::ui::client::Product::Player;
-    if (argc > 1 && std::string(argv[1]) == "--studio") product = stud::ui::client::Product::Studio;
-    const std::optional<QString> place = argc > 1 ? place_file(argv[1]) : std::nullopt;
-    if (place) {
-        product = stud::ui::client::Product::Studio;
-        deep_link = place;
-        std::printf("stud: opening a place file in Studio\n");
-    } else if (argc > 1 && std::string(argv[1]).rfind("roblox-studio", 0) == 0) {
-        product = stud::ui::client::Product::Studio;
-        deep_link = QString::fromUtf8(argv[1]);
-        std::printf("stud: Studio link of %zu bytes\n", std::strlen(argv[1]));
+    if (argc > 1 && (std::string(argv[1]) == "--studio" || place_file(argv[1]) ||
+                     std::string(argv[1]).rfind("roblox-studio", 0) == 0)) {
+        QMessageBox::information(nullptr, QStringLiteral("Stud · Player only"),
+                                 QStringLiteral("This launcher supports Roblox Player only. Studio links and place files are not supported."));
+        return 1;
     } else if (argc > 1 && argv[1][0] != '-') {
         product = stud::ui::client::Product::Player;
         if (stud::ui::is_roblox_link(argv[1])) {

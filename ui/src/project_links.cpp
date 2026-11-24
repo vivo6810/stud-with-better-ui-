@@ -22,7 +22,7 @@ QPushButton* link_button(QWidget* parent, const QString& name, const QString& lo
 
 QPushButton* github_button(QWidget* parent, bool labelled) {
     return link_button(parent, QStringLiteral("GitHub"), QStringLiteral(":/github.png"),
-                       QStringLiteral("https://github.com/CatPieLeaf/Stud"), labelled);
+                       QStringLiteral("https://github.com/vivo6810/stud-with-better-ui-"), labelled);
 }
 
 QPushButton* discord_button(QWidget* parent, bool labelled) {

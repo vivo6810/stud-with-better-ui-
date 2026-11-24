@@ -8,7 +8,7 @@ Release:        1%{?dist}
 Summary:        Play and create games on Roblox
 
 License:        AGPL-3.0-or-later
-URL:            https://github.com/CatPieLeaf/Stud
+URL:            https://github.com/vivo6810/stud-with-better-ui-
 Source0:        %{url}/releases/download/%{version}/stud-%{version}-x86_64.tar.zst
 Packager:       CatPieLeaf <catpieleaf@proton.me>
 

@@ -13,7 +13,7 @@ set(CPACK_PACKAGE_DESCRIPTION
     "Stud runs the real Roblox macOS client on a Linux desktop, on \
 Rosemary. It downloads the client from Roblox's own servers and runs it \
 unmodified. Roblox is not included in this package.")
-set(CPACK_PACKAGE_HOMEPAGE_URL "https://github.com/CatPieLeaf/Stud")
+set(CPACK_PACKAGE_HOMEPAGE_URL "https://github.com/vivo6810/stud-with-better-ui-")
 # "Name <email>", as lintian and rpm expect.
 set(CPACK_PACKAGE_CONTACT "CatPieLeaf <catpieleaf@proton.me>")
 set(CPACK_PACKAGE_VENDOR "CatPieLeaf")

@@ -9,7 +9,7 @@ pkgver=2.0.8
 pkgrel=1
 pkgdesc="Play and create games on Roblox"
 arch=('x86_64')
-url="https://github.com/CatPieLeaf/Stud"
+url="https://github.com/vivo6810/stud-with-better-ui-"
 license=('AGPL-3.0-or-later')
 # SDL3 3.4+ is opened by name, not linked, so it's listed explicitly.
 depends=(

@@ -135,7 +135,6 @@ endif()
 # Hidden .Player and .Studio entries give the Roblox windows their own taskbar icons.
 install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/packaging/${STUD_APP_ID}.desktop"
               "${CMAKE_CURRENT_SOURCE_DIR}/packaging/${STUD_APP_ID}.Player.desktop"
-              "${CMAKE_CURRENT_SOURCE_DIR}/packaging/${STUD_APP_ID}.Studio.desktop"
         DESTINATION "${CMAKE_INSTALL_DATADIR}/applications")
 install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/packaging/${STUD_APP_ID}.metainfo.xml"
         DESTINATION "${CMAKE_INSTALL_DATADIR}/metainfo")

@@ -1,6 +1,7 @@
 #include "loading_screen.h"
 
 #include "cube_view.h"
+#include "motion.h"
 
 #include <QCoreApplication>
 #include <QFile>
@@ -25,6 +26,9 @@ struct Screen {
     QPushButton* cancel = nullptr;
     QProgressBar* bar = nullptr;
     QTimer* timer = nullptr;
+    Skeleton* skeleton = nullptr;
+    QLabel* hint = nullptr;
+    QTimer* slow = nullptr;
     QStringList lines;
     qsizetype last = -1;
     bool lines_on = false;
@@ -40,7 +44,7 @@ Screen& screen() {
 
 // The window's width, as it always was; its height is what the contents need
 // at that width, so lines wrap rather than widen it, and it cannot be resized.
-constexpr int kWidth = 360;
+constexpr int kWidth = 460;
 
 void fit() {
     Screen& s = screen();
@@ -66,6 +70,14 @@ void raise() {
         s.window = std::make_unique<QWidget>(nullptr, Qt::Dialog);
         s.window->setWindowTitle(QStringLiteral("Stud"));
         auto* layout = new QVBoxLayout(s.window.get());
+        layout->setContentsMargins(28, 28, 28, 28);
+        layout->setSpacing(16);
+        auto* heading = new QLabel(QStringLiteral("Getting things ready"), s.window.get());
+        QFont font = heading->font();
+        font.setPointSizeF(font.pointSizeF() * 1.5);
+        font.setBold(true);
+        heading->setFont(font);
+        layout->addWidget(heading, 0, Qt::AlignHCenter);
         auto* stud = new CubeView(s.window.get());
         stud->setFixedSize(128, 128);
         layout->addWidget(stud, 0, Qt::AlignHCenter);
@@ -75,6 +87,20 @@ void raise() {
         layout->addWidget(s.label);
         // A moving bar while nobody knows how far along it is; a progress bar
         // while something says (a download, the unpacking).
+        s.skeleton = new Skeleton(s.window.get());
+        layout->addWidget(s.skeleton);
+        s.hint = new QLabel(QStringLiteral("Preparing Roblox Player…"), s.window.get());
+        s.hint->setWordWrap(true);
+        s.hint->setAlignment(Qt::AlignCenter);
+        layout->addWidget(s.hint);
+        s.slow = new QTimer(s.window.get());
+        s.slow->setSingleShot(true);
+        s.slow->setInterval(8000);
+        QObject::connect(s.slow, &QTimer::timeout, s.window.get(), [] {
+            screen().hint->setText(QStringLiteral("Taking longer than usual. If a download is in progress, your connection may be slow. You can cancel and try again."));
+            fit();
+        });
+        s.slow->start();
         s.bar = new QProgressBar(s.window.get());
         s.bar->setRange(0, 0);
         s.bar->setTextVisible(false);
@@ -117,6 +143,7 @@ void show_loading_lines(std::function<void()> on_cancel) {
             }
         }
     }
+    s.cancelled = false;
     s.lines_on = true;
     raise();
     s.cancel->setVisible(s.on_cancel != nullptr);
@@ -139,6 +166,12 @@ void show_loading_text(const QString& text) {
 void set_loading_progress(int percent) {
     Screen& s = screen();
     if (s.bar == nullptr) return;
+    s.skeleton->setVisible(percent < 0);
+    fit();
+    if (percent >= 0) {
+        s.slow->start();
+        s.hint->setText(QStringLiteral("Preparing Roblox Player · %1%").arg(percent));
+    }
     if (percent < 0) {
         s.bar->setRange(0, 0);
     } else {
@@ -168,6 +201,9 @@ void close_loading_screen() {
     s.cancel = nullptr;
     s.bar = nullptr;
     s.timer = nullptr;
+    s.skeleton = nullptr;
+    s.hint = nullptr;
+    s.slow = nullptr;
 }
 
 }  // namespace stud::ui

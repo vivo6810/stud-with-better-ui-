@@ -1,6 +1,5 @@
 #include "update_check.h"
 
-#include "github_mirror.h"
 #include "notifications.h"
 
 #include <QCryptographicHash>
@@ -25,9 +24,7 @@
 namespace stud::ui {
 namespace {
 
-// Both skip pre-releases: GitHub's latest release, and jsDelivr's newest version tag.
-constexpr const char* kLatestApi = "https://api.github.com/repos/CatPieLeaf/Stud/releases/latest";
-constexpr const char* kLatestJsdelivr = "https://data.jsdelivr.com/v1/packages/gh/CatPieLeaf/Stud/resolved?specifier=latest";
+constexpr const char* kLatestApi = "https://api.github.com/repos/vivo6810/stud-with-better-ui-/releases/latest";
 
 bool g_started = false;
 bool g_update_available = false;
@@ -51,7 +48,7 @@ bool is_newer(const QString& candidate, const QString& current) {
 
 // The .zsync header records the whole file's SHA-1.
 constexpr const char* kAppImage =
-    "https://github.com/CatPieLeaf/Stud/releases/latest/download/Stud-x86_64.AppImage";
+    "https://github.com/vivo6810/stud-with-better-ui-/releases/latest/download/Stud-x86_64.AppImage";
 bool g_updating = false;
 
 QNetworkRequest release_request(const QString& url) {
@@ -159,7 +156,7 @@ UpdateCheck* UpdateCheck::instance() {
 }
 
 QString UpdateCheck::releasesUrl() {
-    return QStringLiteral("https://github.com/CatPieLeaf/Stud/releases/latest");
+    return QStringLiteral("https://github.com/vivo6810/stud-with-better-ui-/releases/latest");
 }
 
 bool UpdateCheck::updateAvailable() { return g_update_available; }
@@ -170,22 +167,20 @@ void UpdateCheck::start() {
     if (g_started) return;
     g_started = true;
 
-    github::get_either(QUrl(QString::fromLatin1(kLatestApi)), QUrl(QString::fromLatin1(kLatestJsdelivr)),
-                       [](const QByteArray& body, bool from_jsdelivr, const QString& error) {
-                           if (!error.isEmpty()) return;  // failures are silent
-                           const QJsonDocument doc = QJsonDocument::fromJson(body);
-                           if (!doc.isObject()) return;
-                           QString tag = doc.object()
-                                             .value(from_jsdelivr ? QStringLiteral("version") : QStringLiteral("tag_name"))
-                                             .toString();
-                           if (tag.startsWith('v', Qt::CaseInsensitive)) tag.remove(0, 1);
-                           if (tag.isEmpty()) return;
-
-                           if (!is_newer(tag, QStringLiteral(STUD_VERSION))) return;
-                           g_update_available = true;
-                           g_latest = tag;
-                           Q_EMIT instance()->updateFound(tag);
-                       });
+    auto* manager = new QNetworkAccessManager(instance());
+    QNetworkReply* reply = manager->get(release_request(QString::fromLatin1(kLatestApi)));
+    QObject::connect(reply, &QNetworkReply::finished, manager, [reply, manager] {
+        const QByteArray body = reply->readAll();
+        const bool success = reply->error() == QNetworkReply::NoError;
+        manager->deleteLater();
+        if (!success) return;
+        QString tag = QJsonDocument::fromJson(body).object().value(QStringLiteral("tag_name")).toString();
+        if (tag.startsWith('v', Qt::CaseInsensitive)) tag.remove(0, 1);
+        if (!is_newer(tag, QStringLiteral(STUD_VERSION))) return;
+        g_update_available = true;
+        g_latest = tag;
+        Q_EMIT instance()->updateFound(tag);
+    });
 }
 
-}  // namespace stud::ui
+} // namespace stud::ui

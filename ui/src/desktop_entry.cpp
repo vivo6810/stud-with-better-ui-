@@ -255,15 +255,13 @@ int install_desktop_entry() {
     };
     if (!install_entry(app_id)) return 1;
     install_entry(app_id + QStringLiteral(".Player"));
-    install_entry(app_id + QStringLiteral(".Studio"));
+
     const QString entry_path = apps_dir + "/" + app_id + ".desktop";
 
     // Declaring a scheme isn't enough: with no default set, browsers show a chooser
     // instead of opening Stud. Written directly instead of via xdg-mime, which reads
     // the desktop from an environment that may be the AppImage's.
-    for (const char* scheme : {"x-scheme-handler/roblox", "x-scheme-handler/roblox-player",
-                               "x-scheme-handler/roblox-studio",
-                               "x-scheme-handler/roblox-studio-auth"}) {
+    for (const char* scheme : {"x-scheme-handler/roblox", "x-scheme-handler/roblox-player"}) {
         set_default_application(QString::fromLatin1(scheme), app_id + QStringLiteral(".desktop"));
     }
 

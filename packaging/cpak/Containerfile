@@ -63,4 +63,4 @@ COPY --from=build /stage/usr /usr
 LABEL org.opencontainers.image.title="Stud" \
       org.opencontainers.image.description="Play and create games on Roblox" \
       org.opencontainers.image.licenses="AGPL-3.0-or-later" \
-      org.opencontainers.image.source="https://github.com/CatPieLeaf/Stud"
+      org.opencontainers.image.source="https://github.com/vivo6810/stud-with-better-ui-"

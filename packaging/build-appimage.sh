@@ -293,7 +293,7 @@ rm -f "$out" "$out.zsync" "$work/image.squashfs"
     -comp xz -Xbcj x86 -b 1M -all-root -noappend -no-progress -quiet
 cp "$uruntime" "$out"
 # Lets AppImageUpdate update Stud in place from the latest release's .zsync.
-"$out" --appimage-addupdinfo "gh-releases-zsync|CatPieLeaf|Stud|latest|Stud-$arch.AppImage.zsync"
+"$out" --appimage-addupdinfo "gh-releases-zsync|vivo6810|stud-with-better-ui-|latest|Stud-$arch.AppImage.zsync"
 cat "$work/image.squashfs" >> "$out"
 rm -f "$work/image.squashfs"
 (cd "$packages" && zsyncmake -u "${out##*/}" -o "${out##*/}.zsync" "${out##*/}")
