@@ -1,4 +1,6 @@
 #include "project_links.h"
+#include "motion.h"
+#include <QSettings>
 #include "mono_icon.h"
 #include "settings_window.h"
 
@@ -124,7 +126,25 @@ SettingsWindow::SettingsWindow(QWidget* parent) : QWidget(parent) {
     setWindowTitle("Stud Settings");
 
     auto* layout = new QVBoxLayout(this);
+    const int unit = fontMetrics().height();
+    layout->setContentsMargins(unit * 2, unit * 2, unit * 2, unit * 2);
+    layout->setSpacing(unit);
+    resize(unit * 58, unit * 38);
+    auto* heading = new QLabel(QStringLiteral("Make it yours."), this);
+    QFont headingFont = heading->font();
+    headingFont.setPointSizeF(headingFont.pointSizeF() * 1.8);
+    headingFont.setBold(true);
+    heading->setFont(headingFont);
+    layout->addWidget(heading);
+    auto* description = new QLabel(QStringLiteral("Player settings · Changes apply when you save"), this);
+    layout->addWidget(description);
+    auto* search = new QLineEdit(this);
+    search->setPlaceholderText(QStringLiteral("Find a settings category…"));
+    search->setClearButtonEnabled(true);
+    search->setAccessibleName(QStringLiteral("Find settings category"));
+    layout->addWidget(search);
     auto* body = new QHBoxLayout();
+    body->setSpacing(unit * 2);
     layout->addLayout(body, 1);
     auto* categories = new QListWidget(this);
     categories->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Expanding);
@@ -133,6 +153,22 @@ SettingsWindow::SettingsWindow(QWidget* parent) : QWidget(parent) {
     body->addWidget(pages, 1);
     connect(categories, &QListWidget::currentRowChanged, pages, &QStackedWidget::setCurrentIndex);
 
+    connect(categories, &QListWidget::currentRowChanged, this, [pages, description, categories](int row) {
+        if (row < 0) return;
+        description->setText(categories->item(row)->text() + QStringLiteral(" · Changes apply when you save"));
+        reveal(pages->widget(row));
+    });
+    connect(search, &QLineEdit::textChanged, this, [categories](const QString& query) {
+        int first = -1;
+        for (int i = 0; i < categories->count(); ++i) {
+            const bool match = categories->item(i)->text().contains(query, Qt::CaseInsensitive);
+            categories->item(i)->setHidden(!match);
+            if (match && first < 0) first = i;
+        }
+        if (first >= 0) categories->setCurrentRow(first);
+        else categories->setCurrentRow(-1);
+    });
+
     // Pages scroll instead of stretching the window.
     const auto scroll_page = [](QWidget*& area) {
         auto* scroll = new QScrollArea();
@@ -140,6 +176,7 @@ SettingsWindow::SettingsWindow(QWidget* parent) : QWidget(parent) {
         scroll->setFrameShape(QFrame::NoFrame);
         auto* page = new QWidget();
         auto* page_layout = new QVBoxLayout(page);
+        page_layout->setSpacing(page->fontMetrics().height());
         scroll->setWidget(page);
         area = scroll;
         return page_layout;
@@ -166,6 +203,9 @@ SettingsWindow::SettingsWindow(QWidget* parent) : QWidget(parent) {
 
     // ---- General -------------------------------------------------------
     auto* general = add_tab("General");
+    reduceMotionCheck_ = new QCheckBox(QStringLiteral("Reduce motion (takes full effect after restart)"), this);
+    reduceMotionCheck_->setChecked(reduced_motion());
+    general->addWidget(reduceMotionCheck_);
     trayCheck_ = new QCheckBox("Show in system tray", this);
     general->addWidget(trayCheck_);
     playerDirectlyCheck_ = new QCheckBox("Open Roblox Player directly, without the welcome page", this);
@@ -354,7 +394,7 @@ SettingsWindow::SettingsWindow(QWidget* parent) : QWidget(parent) {
         buildFlagsTab(parts[0], parts[1]);
     }
 
-    buildStudioTab(add_tab("Studio"));
+
     buildDebugTab(add_tab("Debug"));
 
     // ---- About ---------------------------------------------------------
@@ -408,7 +448,8 @@ SettingsWindow::SettingsWindow(QWidget* parent) : QWidget(parent) {
     buttonRow->addWidget(restartButton_);
     connect(restartButton_, &QPushButton::clicked, this, &SettingsWindow::onRestartClicked);
 
-    auto* saveButton = new QPushButton("Save", this);
+    auto* saveButton = new QPushButton("Save changes", this);
+    saveButton->setDefault(true);
     saveButton->setIcon(mono_icon("document-save", QStyle::SP_DialogSaveButton));
     buttonRow->addWidget(saveButton);
     layout->addLayout(buttonRow);
@@ -475,6 +516,7 @@ void SettingsWindow::installResets() {
         [this, d] { serverRegionCheck_->setChecked(d.server_region_notification); });
     add(historyGamesCheck_, [this, d] { historyGamesCheck_->setChecked(d.record_game_history); });
     add(historyServersCheck_, [this, d] { historyServersCheck_->setChecked(d.record_server_history); });
+    add(reduceMotionCheck_, [this] { reduceMotionCheck_->setChecked(false); });
     add(trayCheck_, [this, d] { trayCheck_->setChecked(d.system_tray); });
     add(playerDirectlyCheck_, [this, d] { playerDirectlyCheck_->setChecked(d.open_player_directly); });
     add(cleanerSpin_, [this, d] { cleanerSpin_->setValue(d.cleaner_days); });
@@ -1487,6 +1529,14 @@ bool SettingsWindow::onSaveClicked() {
     flagsEdit_->setPlainText(QString::fromUtf8(flags_text));
     try {
         stud::config::save_settings(stud::config::default_config_path(), settings);
+        QSettings interface(QStringLiteral("Stud"), QStringLiteral("Interface"));
+        interface.setValue(QStringLiteral("reduceMotion"), reduceMotionCheck_->isChecked());
+        interface.sync();
+        if (interface.status() != QSettings::NoError) {
+            statusLabel_->setText(QStringLiteral("Player settings saved, but the motion preference could not be saved."));
+            return false;
+        }
+        qApp->setProperty("studReducedMotion", reduceMotionCheck_->isChecked());
         statusLabel_->setText(stud_session_is_running()
                                   ? "Settings saved. They apply the next time Roblox starts."
                                   : "Settings saved.");

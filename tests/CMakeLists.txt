@@ -1,4 +1,15 @@
 if(STUD_BUILD_UI)
+    add_executable(stud_loading_screen_test loading_screen_test.cpp
+        ../ui/src/loading_screen.cpp ../ui/src/cube_view.cpp ../ui/src/cube.cpp)
+    target_link_libraries(stud_loading_screen_test PRIVATE stud_ui_mac_client Qt6::Widgets)
+    add_test(NAME loading_screen_test COMMAND stud_loading_screen_test)
+    set_tests_properties(loading_screen_test PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
+    add_executable(stud_studio_associations_test studio_associations_test.cpp)
+    target_include_directories(stud_studio_associations_test PRIVATE ../ui/src)
+    target_link_libraries(stud_studio_associations_test PRIVATE Qt6::Core)
+    add_test(NAME studio_associations_test COMMAND stud_studio_associations_test)
+
     find_package(Qt6 REQUIRED COMPONENTS DBus)
     # These need desktop services and skip without them, e.g. in a chroot or CI container.
     add_executable(stud_gpu_enum_test gpu_enum_test.cpp)

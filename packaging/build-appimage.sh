@@ -172,7 +172,7 @@ ln -f "$appdir/sharun" "$appdir/libexec/stud/rosemary"
 # The desktop entry and icons Stud installs, and redistributed licences.
 (cd /usr/share && cp -a --parents \
     "applications/$app_id.desktop" "applications/$app_id.Player.desktop" \
-    "applications/$app_id.Studio.desktop" "metainfo/$app_id.metainfo.xml" "mime/packages/$app_id.xml" \
+    "metainfo/$app_id.metainfo.xml" "mime/packages/$app_id.xml" \
     icons/hicolor/*/apps/"$app_id"*.png licenses/stud doc/stud \
     "$appdir/share/")
 # AppImageHub only reads metainfo from usr/share/metainfo.
@@ -292,10 +292,7 @@ rm -f "$out" "$out.zsync" "$work/image.squashfs"
 "$uruntime" --appimage-mksquashfs "$appdir" "$work/image.squashfs" \
     -comp xz -Xbcj x86 -b 1M -all-root -noappend -no-progress -quiet
 cp "$uruntime" "$out"
-# Lets AppImageUpdate update Stud in place from the latest release's .zsync.
-"$out" --appimage-addupdinfo "gh-releases-zsync|CatPieLeaf|Stud|latest|Stud-$arch.AppImage.zsync"
 cat "$work/image.squashfs" >> "$out"
 rm -f "$work/image.squashfs"
-(cd "$packages" && zsyncmake -u "${out##*/}" -o "${out##*/}.zsync" "${out##*/}")
 
 say "written: $out"

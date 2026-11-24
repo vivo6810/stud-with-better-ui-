@@ -1,3 +1,4 @@
+#include "motion.h"
 #include "project_links.h"
 #include "mono_icon.h"
 #include "chooser.h"
@@ -50,161 +51,6 @@ namespace stud::ui {
 
 namespace {
 
-QIcon icon_of(client::Product product) {
-    return QIcon(product == client::Product::Studio ? QStringLiteral(":/studblu.png")
-                                                    : QStringLiteral(":/studred.png"));
-}
-
-// The title swaying with the spinning stud fixed in front and an occasional shine.
-class Emblem : public QWidget {
-public:
-    Emblem(int cube, int title, int overlap, QWidget* parent) : QWidget(parent), cube_size_(cube) {
-        // One scale, fixed at creation, so later DPI changes don't resize the images.
-        const qreal ratio = devicePixelRatioF();
-        logo_ = QPixmap(QStringLiteral(":/stud-title.png"))
-                    .scaledToWidth(int(title * ratio), Qt::SmoothTransformation)
-                    .toImage()
-                    .convertToFormat(QImage::Format_ARGB32_Premultiplied);
-        logo_.setDevicePixelRatio(ratio);
-        const QSizeF size = logo_.deviceIndependentSize();
-
-        anchor_ = QPointF(-(size.width() / 2.0 + cube / 2.0 - overlap), 0.0);
-        const double tilt = kSwayDegrees * std::numbers::pi / 180.0;
-        const double title_w = size.width() * std::cos(tilt) + size.height() * std::sin(tilt);
-        const double title_h = size.width() * std::sin(tilt) + size.height() * std::cos(tilt);
-        const double travel = std::abs(anchor_.x()) * std::sin(tilt);
-        const int width = int(cube - overlap + title_w) + 2;
-        const int height = int(std::max(cube + 2 * travel, title_h)) + 2;
-        setFixedSize(width, height);
-        pivot_ = QPointF(width - title_w / 2.0 - 1, height / 2.0);
-
-        clock_.start();
-        next_shine_ = next_shine_after(0);
-        frames_.setInterval(16);
-        connect(&frames_, &QTimer::timeout, this, [this] { step(); });
-        step();
-    }
-
-    void on_click(std::function<void()> clicked) {
-        clicked_ = std::move(clicked);
-        setMouseTracking(true);
-    }
-
-protected:
-    void mousePressEvent(QMouseEvent* event) override {
-        if (event->button() == Qt::LeftButton && clicked_ && over_drawing(event->position())) clicked_();
-        QWidget::mousePressEvent(event);
-    }
-    void mouseMoveEvent(QMouseEvent* event) override {
-        if (clicked_) setCursor(over_drawing(event->position()) ? Qt::PointingHandCursor : Qt::ArrowCursor);
-        QWidget::mouseMoveEvent(event);
-    }
-
-    // Frames only while it can be seen.
-    void showEvent(QShowEvent* event) override {
-        frames_.start();
-        QWidget::showEvent(event);
-    }
-    void hideEvent(QHideEvent* event) override {
-        frames_.stop();
-        QWidget::hideEvent(event);
-    }
-
-    void paintEvent(QPaintEvent*) override {
-        QImage frame = logo_;
-        const double t = seconds() - shine_start_;
-        if (shining_ && t >= 0.0 && t <= kShineSeconds) {
-            // A soft white band, screened over the title's pixels, sweeping top right to bottom left.
-            const QSizeF size = logo_.deviceIndependentSize();
-            QImage band(frame.size(), QImage::Format_ARGB32_Premultiplied);
-            band.setDevicePixelRatio(frame.devicePixelRatio());
-            band.fill(Qt::transparent);
-            {
-                QPainter shine(&band);
-                shine.setRenderHint(QPainter::Antialiasing);
-                const double travel = size.width() + size.height();
-                const double along = t / kShineSeconds * (travel + 2 * size.height()) - size.height();
-                const QPointF centre(size.width() - along * size.width() / travel,
-                                     along * size.height() / travel);
-                const QPointF dir(size.height(), size.height());
-                for (const auto& [width, alpha] : {std::pair{kShineWidth, 70}, std::pair{kShineWidth * 0.6, 140},
-                                                   std::pair{kShineWidth * 0.3, 230}}) {
-                    shine.setPen(QPen(QColor(255, 255, 255, alpha), width, Qt::SolidLine, Qt::FlatCap));
-                    shine.drawLine(centre - dir, centre + dir);
-                }
-                shine.setCompositionMode(QPainter::CompositionMode_DestinationIn);
-                shine.drawImage(QPointF(0, 0), logo_);
-            }
-            QPainter blend(&frame);
-            blend.setCompositionMode(QPainter::CompositionMode_Screen);
-            blend.drawImage(QPointF(0, 0), band);
-        }
-        QPainter painter(this);
-        painter.setRenderHint(QPainter::SmoothPixmapTransform);
-        painter.translate(pivot_);
-        painter.rotate(angle_);
-        const QSizeF size = logo_.deviceIndependentSize();
-        painter.drawImage(QPointF(-size.width() / 2.0, -size.height() / 2.0), frame);
-        draw_cube(painter, QRectF(anchor_.x() - cube_size_ / 2.0, anchor_.y() - cube_size_ / 2.0, cube_size_,
-                                  cube_size_),
-                  seconds());
-    }
-
-private:
-    static constexpr double kSwayDegrees = 3.0;
-    static constexpr double kPeriodSeconds = 4.0;
-    static constexpr double kShineSeconds = 0.8;
-    static constexpr double kShineWidth = 10.0;
-    // Randomised interval.
-    static constexpr int kShineEveryMinMs = 4000;
-    static constexpr int kShineEveryMaxMs = 10000;
-
-    double seconds() const { return double(clock_.elapsed()) / 1000.0; }
-
-    // Whether `at` lands on the cube or on a visible pixel of the title, as the
-    // last frame painted them, sway included.
-    bool over_drawing(QPointF at) const {
-        const QPointF local = QTransform().translate(pivot_.x(), pivot_.y()).rotate(angle_).inverted().map(at);
-        if (QRectF(anchor_.x() - cube_size_ / 2.0, anchor_.y() - cube_size_ / 2.0, cube_size_, cube_size_)
-                .contains(local)) {
-            return true;
-        }
-        const QSizeF size = logo_.deviceIndependentSize();
-        const QPointF in_logo = (local + QPointF(size.width() / 2.0, size.height() / 2.0)) * logo_.devicePixelRatio();
-        const QPoint pixel(int(in_logo.x()), int(in_logo.y()));
-        return logo_.valid(pixel) && qAlpha(logo_.pixel(pixel)) > 0;
-    }
-
-    double next_shine_after(double now) const {
-        return now + QRandomGenerator::global()->bounded(kShineEveryMinMs, kShineEveryMaxMs) / 1000.0;
-    }
-
-    void step() {
-        const double now = seconds();
-        angle_ = kSwayDegrees * std::sin(2.0 * std::numbers::pi * now / kPeriodSeconds);
-        if (!shining_ && now >= next_shine_) {
-            shining_ = true;
-            shine_start_ = now;
-        } else if (shining_ && now - shine_start_ > kShineSeconds) {
-            shining_ = false;
-            next_shine_ = next_shine_after(now);
-        }
-        update();
-    }
-
-    QTimer frames_;
-    std::function<void()> clicked_;
-    QImage logo_;
-    int cube_size_;
-    QPointF anchor_;
-    QPointF pivot_;
-    QElapsedTimer clock_;
-    double angle_ = 0.0;
-    bool shining_ = false;
-    double shine_start_ = 0.0;
-    double next_shine_ = 0.0;
-};
-
 // QTextBrowser can't show remote images, so each one is downloaded and the notes relaid out.
 class NotesView : public QTextBrowser {
 public:
@@ -247,6 +93,26 @@ private:
     QSet<QUrl> requested_;
 };
 
+// GitHub tags are case-sensitive; support both common version conventions.
+void fetch_release_notes(QNetworkAccessManager* net, const QString& tag,
+                         const std::function<void(QNetworkReply*)>& done, bool allow_prefix = true) {
+    QNetworkRequest request(QUrl(QStringLiteral("https://api.github.com/repos/vivo6810/stud-with-better-ui-/releases/tags/%1")
+                                     .arg(QString::fromLatin1(QUrl::toPercentEncoding(tag)))));
+    request.setHeader(QNetworkRequest::UserAgentHeader, QStringLiteral("Stud/" STUD_VERSION));
+    request.setRawHeader("Accept", "application/vnd.github.html+json");
+    request.setTransferTimeout(10000);
+    QNetworkReply* reply = net->get(request);
+    QObject::connect(reply, &QNetworkReply::finished, net, [net, reply, tag, done, allow_prefix] {
+        if (allow_prefix && reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt() == 404) {
+            reply->deleteLater();
+            const QString alternative = tag.startsWith(QLatin1Char('v')) ? tag.mid(1) : QLatin1Char('v') + tag;
+            fetch_release_notes(net, alternative, done, false);
+            return;
+        }
+        done(reply);
+    });
+}
+
 void show_release_notes(QWidget* parent) {
     auto* dialog = new QDialog(parent);
     dialog->setAttribute(Qt::WA_DeleteOnClose);
@@ -254,7 +120,14 @@ void show_release_notes(QWidget* parent) {
     auto* layout = new QVBoxLayout(dialog);
     auto* notes = new NotesView(dialog);
     notes->setOpenExternalLinks(true);
-    notes->setText(QStringLiteral("Loading the release notes..."));
+    auto* skeleton = new Skeleton(dialog);
+    layout->addWidget(skeleton);
+    auto* status = new QLabel(QStringLiteral("Loading release notes…"), dialog);
+    layout->addWidget(status);
+    notes->hide();
+    QTimer::singleShot(4000, status, [status] {
+        status->setText(QStringLiteral("Still loading. The connection may be slow; you can keep playing."));
+    });
     layout->addWidget(notes);
     auto* close = new QDialogButtonBox(QDialogButtonBox::Close, dialog);
     QObject::connect(close, &QDialogButtonBox::rejected, dialog, &QDialog::close);
@@ -263,19 +136,22 @@ void show_release_notes(QWidget* parent) {
     dialog->show();
 
     auto* net = new QNetworkAccessManager(dialog);
-    QNetworkRequest request(QUrl(QStringLiteral("https://api.github.com/repos/CatPieLeaf/Stud/releases/tags/%1")
-                                     .arg(QStringLiteral(STUD_VERSION))));
-    request.setHeader(QNetworkRequest::UserAgentHeader, QStringLiteral("Stud/" STUD_VERSION));
-    request.setRawHeader("Accept", "application/vnd.github.html+json");
-    request.setTransferTimeout(10000);
-    QNetworkReply* reply = net->get(request);
-    QObject::connect(reply, &QNetworkReply::finished, notes, [reply, notes] {
+    fetch_release_notes(net, QStringLiteral(STUD_VERSION), [notes, skeleton, status, dialog, layout](QNetworkReply* reply) {
+        skeleton->hide();
+        status->hide();
+        notes->show();
+        reveal(notes);
         reply->deleteLater();
         const QJsonObject release = QJsonDocument::fromJson(reply->readAll()).object();
         const QString body = release.value(QStringLiteral("body_html")).toString();
         if (reply->error() != QNetworkReply::NoError || body.isEmpty()) {
-            notes->setText(QStringLiteral("There are no release notes for Stud %1 on GitHub.")
-                               .arg(QStringLiteral(STUD_VERSION)));
+            notes->setText(QStringLiteral("Release notes could not be loaded. You can play without them."));
+            auto* retry = new QPushButton(QStringLiteral("Retry"), dialog);
+            layout->addWidget(retry);
+            QObject::connect(retry, &QPushButton::clicked, dialog, [dialog] {
+                show_release_notes(dialog->parentWidget());
+                dialog->close();
+            });
             return;
         }
         const QString name = release.value(QStringLiteral("name")).toString();
@@ -301,145 +177,92 @@ bool rpm_without_wpe() {
 
 std::optional<client::Product> choose_product() {
     QDialog dialog;
-    dialog.setWindowTitle(QStringLiteral("Stud"));
-    auto* layout = new QVBoxLayout(&dialog);
-    layout->setSizeConstraint(QLayout::SetFixedSize);
+    dialog.setWindowTitle(QStringLiteral("Stud · Roblox for Linux"));
+    const int unit = dialog.fontMetrics().height();
+    dialog.resize(unit * 48, unit * 30);
+    dialog.setMinimumSize(unit * 34, unit * 24);
+    auto* layout = new QHBoxLayout(&dialog);
+    layout->setContentsMargins(unit * 2, unit * 2, unit * 2, unit * 2);
+    layout->setSpacing(unit * 3);
 
-    constexpr int kCube = 96;
-    constexpr int kTitle = 138;
-    constexpr int kOverlap = 8;
-    constexpr int kGap = 40;
-    auto* header = new Emblem(kCube, kTitle, kOverlap, &dialog);
-
-    auto* about = new QVBoxLayout();
-    about->addStretch();
-    auto* by = new QLabel(QStringLiteral("By CatPieLeaf"), &dialog);
-    auto* version = new QLabel(QStringLiteral("Version %1").arg(QStringLiteral(STUD_VERSION)), &dialog);
-    by->setAlignment(Qt::AlignRight);
-    version->setAlignment(Qt::AlignRight);
-    // A newer Stud exists: the version turns into a red link to it.
-    const auto mark_outdated = [version] {
-        version->setTextFormat(Qt::RichText);
-        version->setOpenExternalLinks(false);
-        QObject::connect(version, &QLabel::linkActivated, version, [](const QString&) { UpdateCheck::open(); });
-        version->setText(QStringLiteral("<a href=\"%1\" style=\"color:#d62f2f; text-decoration:underline;\">"
-                                        "Version %2</a>")
-                             .arg(UpdateCheck::releasesUrl(), QStringLiteral(STUD_VERSION)));
-        version->setToolTip(QStringLiteral("Stud %1 is available").arg(UpdateCheck::latestVersion()));
-    };
-    QObject::connect(UpdateCheck::instance(), &UpdateCheck::updateFound, version,
-                     [mark_outdated](const QString&) { mark_outdated(); });
-    if (UpdateCheck::updateAvailable()) mark_outdated();
-    UpdateCheck::start();
-    about->addWidget(by, 0, Qt::AlignRight);
-    about->addWidget(version, 0, Qt::AlignRight);
-    auto* notes = new QPushButton(&dialog);
-    notes->setIcon(mono_icon("help-about", QStyle::SP_MessageBoxInformation));
-    notes->setToolTip(QStringLiteral("Release notes"));
-    QObject::connect(notes, &QPushButton::clicked, &dialog, [&dialog] { show_release_notes(&dialog); });
-    auto* discord = discord_button(&dialog, /*labelled=*/false);
-    const int side = notes->sizeHint().height();
-    notes->setFixedSize(side, side);
-    discord->setFixedSize(side, side);
-    auto* links = new QHBoxLayout();
-    links->addStretch();
-    links->addWidget(discord);
-    links->addWidget(notes);
-    about->addLayout(links);
-    about->addStretch();
-
-    auto* top = new QHBoxLayout();
-    top->addWidget(header, 0, Qt::AlignLeft | Qt::AlignVCenter);
-    top->addSpacing(kGap);
-    top->addLayout(about);
-    layout->addLayout(top);
-
-    QStringList quotes;
-    QFile file(QStringLiteral(":/quotes.txt"));
-    if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        for (const QString& line : QString::fromUtf8(file.readAll()).split(QLatin1Char('\n'))) {
-            if (!line.trimmed().isEmpty()) quotes.append(line.trimmed());
-        }
-    }
-    // One extra fact with an NVIDIA GPU, like the About cube.
-    {
-        stud::config::StudSettings settings;
-        try {
-            settings = stud::config::load_settings(stud::config::default_config_path());
-        } catch (const stud::config::SettingsError&) {
-        }
-        const auto chosen = chosen_gpu_index(settings.gpu);
-        for (const auto& gpu : enumerate_gpus()) {
-            if (gpu.device_index == chosen && gpu.vendor_id == kVendorNvidia) {
-                quotes.append(QString::fromLatin1(kNvidiaNote));
-            }
-        }
-    }
-    if (!quotes.isEmpty()) {
-        auto* quote = new QLabel(&dialog);
-        quote->setTextFormat(Qt::RichText);
-        quote->setWordWrap(true);
-        quote->setAlignment(Qt::AlignCenter);
-        // Fixed to the header's width so long lines wrap.
-        quote->setFixedWidth(top->sizeHint().width());
-        layout->addWidget(quote, 0, Qt::AlignHCenter);
-        // Clicking the logo shows another quote, never the same one twice in a row.
-        auto show_quote = [quote, quotes, shown = qsizetype(-1)]() mutable {
-            qsizetype next = QRandomGenerator::global()->bounded(quotes.size() - (shown < 0 ? 0 : 1));
-            if (shown >= 0 && next >= shown) ++next;
-            shown = quotes.size() > 1 ? next : -1;
-            // Italic in the markup, so styles can't override it.
-            quote->setText(QStringLiteral("<i>%1</i>").arg(quotes.at(next).toHtmlEscaped()));
-        };
-        show_quote();
-        header->on_click(show_quote);
-    }
-    if (rpm_without_wpe()) {
-        QFrame* warning = command_warning(
-            &dialog,
-            QStringLiteral("Roblox's sign-in and web pages need WPE WebKit, which Fedora doesn't package. "
-                           "Add the Terra repository and install it, then restart Stud:"),
-            QStringLiteral("sudo dnf install --nogpgcheck --repofrompath "
-                           "'terra,https://repos.fyralabs.com/terra$releasever' terra-release && "
-                           "sudo dnf install wpewebkit"));
-        // As wide as the header, so only the page's height grows.
-        warning->setFixedWidth(top->sizeHint().width());
-        layout->addWidget(warning, 0, Qt::AlignHCenter);
-    }
-    layout->addSpacing(dialog.fontMetrics().height());
-
-    std::optional<client::Product> chosen;
-    auto* buttons = new QHBoxLayout();
-    buttons->setSpacing(dialog.fontMetrics().height() * 2);
-    buttons->addStretch();
-    const int icon = dialog.fontMetrics().height() * 2;
-    for (const client::Product product : {client::Product::Studio, client::Product::Player}) {
-        auto* button = new QToolButton(&dialog);
-        button->setText(client::display_name(product));
-        button->setIcon(icon_of(product));
-        button->setIconSize(QSize(icon, icon));
-        button->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
-        QObject::connect(button, &QToolButton::clicked, &dialog, [&chosen, &dialog, product] {
-            chosen = product;
-            dialog.accept();
-        });
-        buttons->addWidget(button);
-    }
-    buttons->addStretch();
-    layout->addLayout(buttons);
-
+    auto* navigation = new QVBoxLayout;
+    auto* brand = new QLabel(QStringLiteral("STUD"), &dialog);
+    QFont brandFont = brand->font();
+    brandFont.setPointSizeF(brandFont.pointSizeF() * 1.7);
+    brandFont.setBold(true);
+    brand->setFont(brandFont);
+    navigation->addWidget(brand);
+    navigation->addWidget(new QLabel(QStringLiteral("FOR LINUX"), &dialog));
+    navigation->addSpacing(unit * 3);
+    auto* home = new QPushButton(QStringLiteral("Home"), &dialog);
+    home->setCheckable(true);
+    home->setChecked(true);
+    navigation->addWidget(home);
     auto* settings = new QPushButton(QStringLiteral("Settings"), &dialog);
-    settings->setIcon(mono_icon("configure", QStyle::SP_FileDialogDetailedView));
     QObject::connect(settings, &QPushButton::clicked, &dialog, [] { SettingsWindow::showSingleton(); });
-    layout->addWidget(settings, 0, Qt::AlignHCenter);
+    navigation->addWidget(settings);
+    auto* notes = new QPushButton(QStringLiteral("What's new"), &dialog);
+    QObject::connect(notes, &QPushButton::clicked, &dialog, [&dialog] { show_release_notes(&dialog); });
+    navigation->addWidget(notes);
+    navigation->addStretch();
+    navigation->addWidget(discord_button(&dialog, true));
+    auto* version = new QPushButton(QStringLiteral("Stud %1").arg(QStringLiteral(STUD_VERSION)), &dialog);
+    version->setFlat(true);
+    QObject::connect(version, &QPushButton::clicked, &dialog, [] { UpdateCheck::open(); });
+    QObject::connect(UpdateCheck::instance(), &UpdateCheck::updateFound, version, [version](const QString& value) {
+        version->setText(QStringLiteral("Update available · %1").arg(value));
+    });
+    navigation->addWidget(version);
+    layout->addLayout(navigation, 1);
 
-    // Non-modal, so Settings opened from here takes input too.
+    auto* content = new QWidget(&dialog);
+    auto* body = new QVBoxLayout(content);
+    body->setSpacing(unit);
+    body->addWidget(new QLabel(QStringLiteral("YOUR NEXT SESSION STARTS HERE"), content));
+    auto* title = new QLabel(QStringLiteral("Ready when you are."), content);
+    QFont titleFont = title->font();
+    titleFont.setPointSizeF(titleFont.pointSizeF() * 2);
+    titleFont.setBold(true);
+    title->setFont(titleFont);
+    title->setWordWrap(true);
+    body->addWidget(title);
+    auto* subtitle = new QLabel(QStringLiteral("The full Roblox experience. Right here on Linux."), content);
+    subtitle->setWordWrap(true);
+    body->addWidget(subtitle);
+    body->addStretch();
+    auto* cube = new CubeView(content);
+    cube->setFixedSize(unit * 7, unit * 7);
+    body->addWidget(cube, 0, Qt::AlignHCenter);
+    auto* player = new QLabel(QStringLiteral("Roblox Player"), content);
+    player->setAlignment(Qt::AlignCenter);
+    body->addWidget(player);
+    auto* caption = new QLabel(QStringLiteral("Client updates are checked when you play."), content);
+    caption->setAlignment(Qt::AlignCenter);
+    caption->setWordWrap(true);
+    body->addWidget(caption);
+    std::optional<client::Product> chosen;
+    auto* play = new PlayButton(content);
+    QObject::connect(play, &QPushButton::clicked, &dialog, [&] {
+        chosen = client::Product::Player;
+        dialog.accept();
+    });
+    body->addWidget(play);
+    body->addStretch();
+    if (rpm_without_wpe()) {
+        body->addWidget(command_warning(content,
+            QStringLiteral("Sign-in requires WPE WebKit. Install it from Terra, then restart Stud:"),
+            QStringLiteral("sudo dnf install --nogpgcheck --repofrompath 'terra,https://repos.fyralabs.com/terra$releasever' terra-release && sudo dnf install wpewebkit")));
+    }
+    layout->addWidget(content, 4);
+    QObject::connect(home, &QPushButton::clicked, content, [content] { reveal(content); });
+    UpdateCheck::start();
     dialog.setWindowModality(Qt::NonModal);
     QEventLoop loop;
     QObject::connect(&dialog, &QDialog::finished, &loop, &QEventLoop::quit);
     dialog.show();
+    reveal(content);
     loop.exec();
     return chosen;
 }
 
-}  // namespace stud::ui
+} // namespace stud::ui

@@ -129,7 +129,8 @@ bool download(const QString& url, const QString& path, const Progress& progress,
     g_reply = reply;
     bool write_failed = false;
     QObject::connect(reply, &QNetworkReply::readyRead, reply, [&]() {
-        if (file.write(reply->readAll()) < 0) write_failed = true;
+        const QByteArray chunk = reply->readAll();
+        if (file.write(chunk) != chunk.size()) write_failed = true;
     });
     QObject::connect(reply, &QNetworkReply::downloadProgress, reply,
                      [&](qint64 received, qint64 total) {
@@ -146,7 +147,11 @@ bool download(const QString& url, const QString& path, const Progress& progress,
                      qPrintable(reply->errorString()));
         return false;
     }
-    file.write(reply->readAll());
+    const QByteArray remaining = reply->readAll();
+    if (file.write(remaining) != remaining.size()) {
+        file.cancelWriting();
+        return false;
+    }
     return file.commit();
 }
 

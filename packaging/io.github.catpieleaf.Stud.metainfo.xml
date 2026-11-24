@@ -7,10 +7,10 @@
   <project_license>AGPL-3.0-or-later</project_license>
 
   <name>Stud</name>
-  <summary>Play and create games on Roblox</summary>
+  <summary>Play Roblox on Linux</summary>
 
   <description>
-    <p>Stud runs the macOS Roblox Player and Studio on Linux through Rosemary.</p>
+    <p>Stud runs the macOS Roblox Player on Linux through Rosemary. This launcher does not support Studio.</p>
     <p>Features:</p>
     <ul>
       <li>Updates Roblox from Roblox's own servers before each launch</li>
@@ -31,17 +31,12 @@
     <keyword>game</keyword>
     <keyword>gaming</keyword>
     <keyword>launcher</keyword>
-    <keyword>studio</keyword>
   </keywords>
 
   <screenshots>
     <screenshot type="default">
       <caption>Roblox Player running on Stud</caption>
       <image type="source" width="1666" height="1043">https://raw.githubusercontent.com/CatPieLeaf/Stud/main/packaging/screenshots/home.png</image>
-    </screenshot>
-    <screenshot>
-      <caption>Roblox Studio running on Stud</caption>
-      <image type="source" width="1763" height="1098">https://raw.githubusercontent.com/CatPieLeaf/Stud/main/packaging/screenshots/studio.png</image>
     </screenshot>
     <screenshot>
       <caption>The "Tunneler" game on Roblox</caption>
@@ -65,9 +60,9 @@
     </screenshot>
   </screenshots>
 
-  <url type="homepage">https://github.com/CatPieLeaf/Stud</url>
-  <url type="bugtracker">https://github.com/CatPieLeaf/Stud/issues</url>
-  <url type="vcs-browser">https://github.com/CatPieLeaf/Stud</url>
+  <url type="homepage">https://github.com/vivo6810/stud-with-better-ui-</url>
+  <url type="bugtracker">https://github.com/vivo6810/stud-with-better-ui-/issues</url>
+  <url type="vcs-browser">https://github.com/vivo6810/stud-with-better-ui-</url>
 
   <developer id="io.github.catpieleaf">
     <name>CatPieLeaf</name>

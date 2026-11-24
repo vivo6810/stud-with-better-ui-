@@ -6,7 +6,7 @@ stud \- play Roblox on Linux
 .RI [ URI ]
 .br
 .B stud
-.RB [ \-\-roblox | \-\-studio ]
+.RB [ \-\-roblox ]
 .br
 .B stud \-\-settings
 .br
@@ -22,21 +22,20 @@ Roblox is not included. Stud downloads the client from Roblox's own servers
 and keeps it up to date before each launch, and Roblox remains subject to its
 own terms.
 .PP
-Run with no arguments, Stud asks whether to open Roblox or Roblox Studio.
+Run with no arguments, Stud opens the Roblox Player launcher home.
 Given a
-.BR roblox: ,
-.B roblox\-player:
+.B roblox:
 or
-.B roblox\-studio:
-URI \- what a browser hands over when you press Play or Edit on the website \-
-it opens straight into that experience.
+.B roblox\-player:
+URI, it opens straight into that experience.
+Roblox Studio, Studio URIs and place files are not supported by this launcher.
 .SH OPTIONS
 .TP
 .B \-\-roblox
 Open Roblox without asking.
 .TP
 .B \-\-studio
-Open Roblox Studio without asking.
+Not supported. Displays a Player-only message and exits with status 1.
 .TP
 .B \-\-settings
 Open the Settings window on its own, without launching the client. This is
@@ -68,7 +67,7 @@ Rosemary's prefix: Roblox's own settings, login and data.
 One log per session, Stud's and the client's.
 .SH BUGS
 Report at
-.UR https://github.com/CatPieLeaf/Stud/issues
+.UR https://github.com/vivo6810/stud-with-better-ui-/issues
 .UE .
 .PP
 Stud is free software under the GNU Affero General Public License, version 3

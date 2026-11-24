@@ -1,4 +1,5 @@
 #include "cube_view.h"
+#include "theme.h"
 
 #include <QMouseEvent>
 #include <QPainter>
@@ -14,7 +15,7 @@ CubeView::CubeView(QWidget* parent) : QWidget(parent) {
 
 // Frames only while it can be seen: a hidden Settings tab or a closed window costs nothing.
 void CubeView::showEvent(QShowEvent* event) {
-    frames_.start();
+    if (!stud::ui::reduced_motion()) frames_.start();
     QWidget::showEvent(event);
 }
 
@@ -33,5 +34,5 @@ void CubeView::mousePressEvent(QMouseEvent* event) {
 
 void CubeView::paintEvent(QPaintEvent*) {
     QPainter painter(this);
-    draw_cube(painter, rect(), clock_.elapsed() / 1000.0);
+    draw_cube(painter, rect(), stud::ui::reduced_motion() ? 0.0 : clock_.elapsed() / 1000.0);
 }
