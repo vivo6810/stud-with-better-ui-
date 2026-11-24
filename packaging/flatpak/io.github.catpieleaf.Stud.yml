@@ -1,0 +1,164 @@
+app-id: io.github.catpieleaf.Stud
+runtime: org.kde.Platform
+runtime-version: '6.11'
+sdk: org.kde.Sdk
+command: stud
+
+finish-args:
+  - --device=dri
+  - --share=ipc
+  - --share=network
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --socket=pulseaudio
+  - --talk-name=org.kde.StatusNotifierWatcher
+
+add-extensions:
+  org.freedesktop.Platform.ffmpeg-full:
+    directory: lib/ffmpeg
+    version: '25.08'
+    add-ld-path: .
+    autodownload: true
+    autodelete: false
+  org.freedesktop.Platform.VulkanLayer:
+    directory: lib/extensions/vulkan
+    subdirectories: true
+    version: '25.08'
+    add-ld-path: lib
+    merge-dirs: share/vulkan/implicit_layer.d;share/vulkan/explicit_layer.d
+    no-autodownload: true
+
+modules:
+  - name: sdl3
+    buildsystem: cmake-ninja
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DSDL_TESTS=OFF
+      - -DSDL_EXAMPLES=OFF
+      - -DSDL_STATIC=OFF
+      - -DSDL_WAYLAND=ON
+      - -DSDL_X11=ON
+      - -DSDL_PIPEWIRE=ON
+      - -DSDL_PULSEAUDIO=ON
+    sources:
+      - type: archive
+        url: https://github.com/libsdl-org/SDL/releases/download/release-3.4.20/SDL3-3.4.20.tar.gz
+        sha256: f3bb06f55bed9557227a700af2ea62e49497ebdf58037732a731a5fb3ef8581f
+    cleanup:
+      - /include
+      - /lib/cmake
+      - /lib/pkgconfig
+      - /share/licenses/SDL3
+      - /lib/*.a
+
+  - name: wl-clipboard
+    buildsystem: meson
+    config-opts:
+      - -Dfishcompletiondir=no
+      - -Dzshcompletiondir=no
+    sources:
+      - type: archive
+        url: https://github.com/bugaevc/wl-clipboard/archive/refs/tags/v2.2.1.tar.gz
+        sha256: 6eb8081207fb5581d1d82c4bcd9587205a31a3d47bea3ebeb7f41aa1143783eb
+    cleanup:
+      - /share/man
+      - /share/bash-completion
+
+  - name: ruby
+    config-opts:
+      - --disable-install-doc
+    cleanup:
+      - '*'
+    sources:
+      - type: archive
+        url: https://cache.ruby-lang.org/pub/ruby/3.4/ruby-3.4.13.tar.xz
+        sha256: 6474dff9c02ea685fc44877a4807a27366bf109b176dad182108bb8c96d09589
+
+  - name: wpewebkit
+    buildsystem: cmake-ninja
+    build-options:
+      cflags: -g1
+      cxxflags: -g1
+    config-opts:
+      - -DPORT=WPE
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DENABLE_DOCUMENTATION=OFF
+      - -DENABLE_INTROSPECTION=OFF
+      - -DENABLE_MINIBROWSER=OFF
+      - -DENABLE_API_TESTS=OFF
+      - -DENABLE_WEBDRIVER=OFF
+      - -DENABLE_WPE_LEGACY_API=OFF
+      - -DENABLE_WPE_PLATFORM_DRM=OFF
+      - -DENABLE_WPE_PLATFORM_HEADLESS=OFF
+      - -DENABLE_WPE_QT_API=OFF
+      - -DENABLE_BUBBLEWRAP_SANDBOX=OFF
+      - -DENABLE_GAMEPAD=OFF
+      - -DENABLE_SPEECH_SYNTHESIS=OFF
+      - -DENABLE_SPELLCHECK=OFF
+      - -DUSE_FLITE=OFF
+      - -DUSE_LIBHYPHEN=OFF
+      - -DUSE_AVIF=OFF
+      - -DUSE_JPEGXL=OFF
+      - -DUSE_WOFF2=OFF
+      - -DUSE_LIBBACKTRACE=OFF
+      - -DUSE_SYSPROF_CAPTURE=OFF
+      - -DUSE_SYSTEM_UNIFDEF=OFF
+    cleanup:
+      - /include
+      - /lib/pkgconfig
+      - /share/wpe-webkit-2.0
+    sources:
+      - type: archive
+        url: https://wpewebkit.org/releases/wpewebkit-2.54.2.tar.xz
+        sha256: f3284e19e47fcb5ac8c63c2e1c113dbd65b2423eb8a545f5b345707829004f56
+
+  - name: rosemary
+    buildsystem: simple
+    build-options:
+      append-path: /run/build/rosemary/toolchain/bin
+      env:
+        CARGO_HOME: /run/build/rosemary/cargo
+        CARGO_NET_OFFLINE: 'true'
+    build-commands:
+      - rust/install.sh --prefix=/run/build/rosemary/toolchain --disable-ldconfig
+        --components=rustc,cargo,rust-std-x86_64-unknown-linux-gnu
+      - cargo --offline build --release --locked --package rosemary --bin rosemary
+      - install -Dm755 target/release/rosemary -t /app/libexec/stud/
+      - install -Dm644 LICENSE /app/share/licenses/io.github.catpieleaf.Stud/rosemary/LICENSE-Rosemary.txt
+    sources:
+      - type: git
+        url: https://github.com/CatPieLeaf/rosemary-stud.git
+        commit: 9d10c537c2d8c4d7f4ead95ac52713c87f2f00e1
+      - type: archive
+        url: https://static.rust-lang.org/dist/2026-11-12/rust-1.100.0-x86_64-unknown-linux-gnu.tar.xz
+        sha256: 98ee6bec240e1cfe944f17e7092412dc5ef6e008484bb668c6936d35a7d15acd
+        dest: rust
+        only-arches:
+          - x86_64
+      - rosemary-cargo-sources.json
+
+  - name: stud
+    buildsystem: cmake-ninja
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=RelWithDebInfo
+      - -DSTUD_BUILD_ROSEMARY=OFF
+      - -DSTUD_BUILD_TESTS=OFF
+      - -DSTUD_VERSION=2.0.8
+      - -DFETCHCONTENT_FULLY_DISCONNECTED=ON
+      - -DFETCHCONTENT_SOURCE_DIR_MINIZ=/run/build/stud/deps/miniz
+    post-install:
+      - mkdir -p /app/share/licenses/io.github.catpieleaf.Stud
+      - cp -a /app/share/licenses/stud/. /app/share/licenses/io.github.catpieleaf.Stud/
+      - rm -rf /app/share/licenses/stud
+      - mkdir -p /app/lib/ffmpeg /app/lib/extensions/vulkan
+    cleanup:
+      - /share/man
+      - /share/doc
+    sources:
+      - type: archive
+        url: https://github.com/CatPieLeaf/Stud/archive/refs/tags/2.0.8.tar.gz
+        sha256: 27d6d02baf74627d443a536eafe6e32f2f6d7e504604ca0cad050eefced4bc73
+      - type: archive
+        url: https://github.com/richgel999/miniz/archive/refs/tags/3.1.2.tar.gz
+        sha256: 98468f8924934b723276680f85238b6c78bf1f8b49b4459cc9b7214a20e2e9fb
+        dest: deps/miniz

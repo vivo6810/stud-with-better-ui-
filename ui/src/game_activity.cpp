@@ -1,0 +1,457 @@
+#include "game_activity.h"
+#include <QFileInfo>
+#include <QFile>
+#include <QDir>
+
+#include "history.h"
+#include "notifications.h"
+#include "stud/stud_paths.h"
+
+#include <QDateTime>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QNetworkReply>
+#include <QNetworkRequest>
+#include <QRegularExpression>
+#include <QSaveFile>
+#include <QTimer>
+#include <QUrl>
+
+#include <cstdio>
+
+namespace stud::ui {
+
+namespace {
+
+int64_t now_seconds() { return QDateTime::currentSecsSinceEpoch(); }
+
+QString flag_of(const QString& country_code) {
+    // Regional indicator symbols: U+1F1E6 is 'A'.
+    QString flag;
+    if (country_code.size() != 2) return flag;
+    for (const QChar c : country_code.toUpper()) {
+        if (c < u'A' || c > u'Z') return {};
+        flag.append(QChar::fromUcs4(0x1F1E6 + (c.unicode() - u'A')));
+    }
+    return flag;
+}
+
+// The first image of a thumbnails reply.
+QString first_image_url(const QJsonObject& reply) {
+    return reply.value(QStringLiteral("data")).toArray().at(0).toObject().value(QStringLiteral("imageUrl")).toString();
+}
+
+}  // namespace
+
+GameActivity::GameActivity(const Options& options, QObject* parent)
+    : QObject(parent), options_(options) {
+    studio_since_ = now_seconds();
+    if (options_.discord) {
+        discord_rpc_start(kRobloxDiscordApplicationId);
+        publish();
+        // The account seen last time, so the avatar shows before the first join.
+        QFile saved(user_id_file());
+        if (!options_.studio && saved.open(QIODevice::ReadOnly)) signed_in(QString::fromLatin1(saved.readAll()).trimmed());
+    }
+    if (options_.studio && !options_.studio_logs.isEmpty()) follow_studio_logs();
+}
+
+void GameActivity::follow_studio_logs() {
+    studio_started_ = QDateTime::currentDateTime();
+    QDir().mkpath(options_.studio_logs);
+    studio_watcher_.addPath(options_.studio_logs);
+    // A new log: Studio starting, or a second Studio opening a place.
+    const auto scan = [this] {
+        const QDir dir(options_.studio_logs);
+        for (const QFileInfo& log : dir.entryInfoList({QStringLiteral("*_Studio_*_last.log")}, QDir::Files)) {
+            const QString path = log.absoluteFilePath();
+            if (studio_read_.contains(path) || log.fileName().contains(QStringLiteral("CrashHandler"))) continue;
+            const QDateTime born = log.birthTime().isValid() ? log.birthTime() : log.lastModified();
+            if (born < studio_started_) continue;
+            studio_read_.insert(path, {0, {}});
+            studio_watcher_.addPath(path);
+            read_studio_log(path);
+        }
+    };
+    connect(&studio_watcher_, &QFileSystemWatcher::directoryChanged, this, scan);
+    connect(&studio_watcher_, &QFileSystemWatcher::fileChanged, this, &GameActivity::read_studio_log);
+    scan();
+}
+
+void GameActivity::read_studio_log(const QString& path) {
+    auto it = studio_read_.find(path);
+    if (it == studio_read_.end()) return;
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly)) return;
+    if (file.size() < it->first) it->first = 0;  // truncated
+    file.seek(it->first);
+    QByteArray text = it->second + file.readAll();
+    it->first = file.pos();
+    const qsizetype end = text.lastIndexOf('\n');
+    it->second = end < 0 ? text : text.mid(end + 1);
+    if (end < 0) return;
+    for (const QByteArray& raw : text.left(end).split('\n')) {
+        if (wants(raw)) line(raw);
+    }
+}
+
+GameActivity::~GameActivity() {
+    if (options_.discord) discord_rpc_stop();
+}
+
+bool GameActivity::wants(const QByteArray& line) {
+    // Every line line() reacts to must be listed here.
+    static const char* const kMarks[] = {
+        "! Joining game", "UDMUX Address", "doTeleport: joinScriptUrl",
+        "Report game_join_loadtime:", "[BloxstrapRPC] ", "[FLog::SingleSurfaceApp] leaveUGCGameInternal",
+        "[FLog::PlaceManager]", "[FLog::RobloxDocManager] Setting current doc to type ",
+        "[FLog::CloseDataModel] Setting place ID ",
+    };
+    for (const char* mark : kMarks) {
+        if (line.contains(mark)) return true;
+    }
+    return false;
+}
+
+void GameActivity::line(const QByteArray& raw) {
+    const QString text = QString::fromUtf8(raw);
+    if (options_.studio) {
+        studio_line(text);
+        return;
+    }
+    // "! Joining game '<job id>' place <place id> at <address>"
+    static const QRegularExpression joining(
+        QStringLiteral(R"(! Joining game '([0-9a-fA-F-]+)' place (\d+))"));
+    // "UDMUX Address = <public address>, Port = ..."
+    static const QRegularExpression udmux(QStringLiteral(R"(UDMUX Address = ([0-9.]+))"));
+    // Join types 4 and 6 are reserved servers. The ticket on this line isn't kept.
+    static const QRegularExpression join_type(QStringLiteral(R"(JoinTypeId"%3a(\d+)%2c)"));
+    static const QRegularExpression referral(QStringLiteral(R"(referral_page:([^,]+))"));
+    static const QRegularExpression user_id(QStringLiteral(R"(userid:(\d+))"));
+    if (const auto m = joining.match(text); m.hasMatch()) {
+        joined(m.captured(2), m.captured(1));
+    } else if (const auto m = udmux.match(text); m.hasMatch()) {
+        server(m.captured(1));
+    } else if (text.contains(QStringLiteral("UgcExperienceController: doTeleport: joinScriptUrl"))) {
+        const int type = join_type.match(text).captured(1).toInt();
+        teleport_reserved_ = type == 4 || type == 6;
+    } else if (text.contains(QStringLiteral("[FLog::GameJoinLoadTime] Report game_join_loadtime:"))) {
+        if (const auto m = user_id.match(text); m.hasMatch()) signed_in(m.captured(1));
+        const QString page = referral.match(text).captured(1);
+        if (page.contains(QStringLiteral("RequestPrivateGame")) ||
+            page.contains(QStringLiteral("GameDetailPageJSHybridEvent"))) {
+            server_ = Server::Private;
+            publish();
+        }
+    } else if (text.startsWith(QStringLiteral("[BloxstrapRPC] "))) {
+        // The client prints each one twice; the bare copy is used.
+        const QJsonObject message =
+            QJsonDocument::fromJson(raw.mid(qsizetype(sizeof("[BloxstrapRPC] ")) - 1)).object();
+        const QString command = message.value(QStringLiteral("command")).toString();
+        if (command == QStringLiteral("SetRichPresence")) {
+            rich_presence(message.value(QStringLiteral("data")).toObject());
+        } else if (command == QStringLiteral("SetLaunchData") && !place_.isEmpty()) {
+            const QString data = message.value(QStringLiteral("data")).toString();
+            if (data.size() <= 200) {
+                launch_data_ = data;
+                publish();
+            }
+        }
+    } else if (text.contains(QStringLiteral("[FLog::SingleSurfaceApp] leaveUGCGameInternal"))) {
+        // Not on Client:Disconnect: a teleport disconnects too, and its close can
+        // land after the new join. A teleport logs its own "Joining game".
+        const bool was_in_game = !place_.isEmpty();
+        left();
+        if (was_in_game && options_.close_on_leave) Q_EMIT leftGame();
+    }
+}
+
+QString GameActivity::user_id_file() {
+    return QString::fromStdString(stud::paths::data_dir()) + QStringLiteral("/user-id");
+}
+
+// The signed-in account's avatar head, as Discord's small image.
+void GameActivity::signed_in(const QString& user) {
+    if (!options_.discord || user.isEmpty() || user == user_id_) return;
+    user_id_ = user;
+    QSaveFile saved(user_id_file());
+    if (saved.open(QIODevice::WriteOnly)) {
+        saved.write(user.toLatin1());
+        saved.commit();
+    }
+    fetch(QStringLiteral("https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=%1"
+                         "&size=150x150&format=Png&isCircular=true").arg(user),
+          [this, user](const QJsonObject& reply) {
+              if (user != user_id_) return;
+              avatar_ = first_image_url(reply);
+              publish();
+          });
+}
+
+// The game being left goes into history, and what showed about it is cleared.
+void GameActivity::close_game() {
+    if (!place_.isEmpty() && options_.history_games) {
+        history::record(place_, name_, icon_, job_, joined_at_, now_seconds(), location_,
+                        options_.history_servers);
+    }
+    location_.clear();
+    ++generation_;
+    place_.clear();
+    job_.clear();
+    name_.clear();
+    creator_.clear();
+    icon_.clear();
+    launch_data_.clear();
+    server_ = Server::Public;
+    game_ = {};
+    game_details_ = game_state_ = game_start_ = game_end_ = false;
+}
+
+void GameActivity::joined(const QString& place, const QString& job) {
+    if (place == place_ && job == job_) return;
+    // A teleport ends the server it leaves.
+    close_game();
+    place_ = place;
+    job_ = job;
+    joined_at_ = now_seconds();
+    server_ = teleport_reserved_ ? Server::Reserved : Server::Public;
+    teleport_reserved_ = false;
+    std::printf("stud: joined place %s\n", qPrintable(place));
+    publish();
+    look_up(place);
+}
+
+void GameActivity::look_up(const QString& place) {
+    if (!options_.discord && !options_.history_games) return;
+    const quint64 generation = generation_;
+    fetch(QStringLiteral("https://apis.roblox.com/universes/v1/places/%1/universe").arg(place),
+          [this, generation](const QJsonObject& json) {
+              const qint64 universe = json.value(QStringLiteral("universeId")).toInteger();
+              if (generation != generation_ || universe <= 0) return;
+              fetch(QStringLiteral("https://games.roblox.com/v1/games?universeIds=%1").arg(universe),
+                    [this, generation](const QJsonObject& games) {
+                        if (generation != generation_) return;
+                        const QJsonObject game =
+                            games.value(QStringLiteral("data")).toArray().at(0).toObject();
+                        name_ = game.value(QStringLiteral("name")).toString();
+                        creator_ = game.value(QStringLiteral("creator"))
+                                       .toObject()
+                                       .value(QStringLiteral("name"))
+                                       .toString();
+                        publish();
+                    });
+              fetch(QStringLiteral("https://thumbnails.roblox.com/v1/games/icons?universeIds=%1"
+                                   "&size=512x512&format=Png&isCircular=false")
+                        .arg(universe),
+                    [this, generation](const QJsonObject& icons) {
+                        if (generation != generation_) return;
+                        icon_ = first_image_url(icons);
+                        publish();
+                    });
+          });
+}
+
+void GameActivity::left() {
+    if (place_.isEmpty()) return;
+    close_game();
+    publish();
+}
+
+void GameActivity::server(const QString& address) {
+    const bool for_history = options_.history_games && options_.history_servers;
+    if (!options_.region && !for_history) return;
+    // Over TLS, and only the game server's public address, never the player's.
+    const quint64 generation = generation_;
+    fetch(QStringLiteral("https://ipwho.is/%1?fields=success,country,country_code,city").arg(address),
+          [this, generation](const QJsonObject& json) {
+              if (!json.value(QStringLiteral("success")).toBool()) return;
+              const QString country = json.value(QStringLiteral("country")).toString();
+              const QString city = json.value(QStringLiteral("city")).toString();
+              const QString where = city.isEmpty() ? country : city + QStringLiteral(", ") + country;
+              if (generation == generation_) location_ = where;
+              if (!options_.region) return;
+              const QString flag = flag_of(json.value(QStringLiteral("country_code")).toString());
+              send_notification(QStringLiteral("Server region"),
+                                flag.isEmpty() ? where : flag + QStringLiteral(" ") + where,
+                                QString(), {/*transient=*/true, /*suppress_sound=*/true});
+          });
+}
+
+// BloxstrapRPC's SetRichPresence: details/state (128 chars max; "<reset>" restores
+// Stud's), timeStart/timeEnd (Unix seconds; 0 clears), smallImage/largeImage
+// ({assetId, hoverText, clear, reset}). Absent keys leave what's showing.
+void GameActivity::rich_presence(const QJsonObject& data) {
+    if (!options_.discord || place_.isEmpty()) return;
+    const auto text = [&data](const char* key, std::string& out, bool& set) {
+        const QJsonValue value = data.value(QLatin1String(key));
+        if (!value.isString() || value.toString().size() > 128) return;
+        const QString s = value.toString();
+        set = s != QStringLiteral("<reset>");
+        out = set ? s.toStdString() : std::string();
+    };
+    text("details", game_.details, game_details_);
+    text("state", game_.state, game_state_);
+    const auto time = [&data](const char* key, int64_t& out, bool& set) {
+        const QJsonValue value = data.value(QLatin1String(key));
+        if (!value.isDouble()) return;
+        out = value.toInteger();
+        set = true;  // 0 clears it
+    };
+    time("timeStart", game_.start, game_start_);
+    time("timeEnd", game_.end, game_end_);
+    const quint64 generation = generation_;
+    const auto image = [&, generation](const char* key, std::string DiscordActivity::*url,
+                                       std::string DiscordActivity::*hover) {
+        const QJsonObject spec = data.value(QLatin1String(key)).toObject();
+        if (spec.isEmpty()) return;
+        if (spec.value(QStringLiteral("clear")).toBool() || spec.value(QStringLiteral("reset")).toBool()) {
+            game_.*url = std::string();
+            game_.*hover = std::string();
+            return;
+        }
+        if (spec.contains(QStringLiteral("hoverText"))) {
+            game_.*hover = spec.value(QStringLiteral("hoverText")).toString().toStdString();
+        }
+        const qint64 asset = spec.value(QStringLiteral("assetId")).toInteger();
+        if (asset > 0) {
+            asset_image(asset, [this, generation, url](const QString& image_url) {
+                if (generation != generation_) return;
+                game_.*url = image_url.toStdString();
+                publish();
+            });
+        }
+    };
+    image("largeImage", &DiscordActivity::large_image, &DiscordActivity::large_text);
+    image("smallImage", &DiscordActivity::small_image, &DiscordActivity::small_text);
+    publish();
+}
+
+namespace {
+QString g_server_link;
+}  // namespace
+
+QString current_server_link() { return g_server_link; }
+
+// Public servers and reserved ones with launch data; never private servers.
+QString GameActivity::server_link() const {
+    if (options_.studio || place_.isEmpty() || job_.isEmpty()) return {};
+    const bool joinable =
+        server_ == Server::Public || (server_ == Server::Reserved && !launch_data_.isEmpty());
+    if (!joinable) return {};
+    QString url = QStringLiteral("https://www.roblox.com/games/start?placeId=%1&gameInstanceId=%2")
+                      .arg(place_, job_);
+    if (!launch_data_.isEmpty()) {
+        url += QStringLiteral("&launchData=") + QString::fromLatin1(QUrl::toPercentEncoding(launch_data_));
+    }
+    return url;
+}
+
+void GameActivity::publish() {
+    g_server_link = server_link();
+    if (!options_.discord) return;
+    DiscordActivity a;
+    if (options_.studio) {
+        // A published place by its public name and icon; a local file as "a place".
+        if (studio_doc_ == -2) {
+            a.details = studio_editing_ ? "Developing a place" : "In Roblox Studio";
+        } else if (studio_doc_ == -1) {
+            a.details = "Idling";
+        } else {
+            a.details = name_.isEmpty() ? "Developing a place" : "Developing " + name_.toStdString();
+            a.large_image = icon_.toStdString();
+            a.large_text = name_.toStdString();
+        }
+        a.state = studio_doc_ == 2 ? "Editing a script" : "Roblox Studio";
+        a.start = studio_since_;
+        a.status_display = 2;
+        discord_rpc_set(a);
+        return;
+    }
+    if (place_.isEmpty()) {
+        a.details = "In the Roblox app";
+        a.small_image = avatar_.toStdString();
+        discord_rpc_set(a);
+        return;
+    }
+    a.details = game_details_ ? game_.details : (name_.isEmpty() ? "In a game" : name_.toStdString());
+    a.state = game_state_ ? game_.state
+                          : (creator_.isEmpty() ? std::string() : "by " + creator_.toStdString());
+    a.large_image = !game_.large_image.empty() ? game_.large_image : icon_.toStdString();
+    a.large_text = !game_.large_text.empty() ? game_.large_text : name_.toStdString();
+    a.small_image = !game_.small_image.empty() ? game_.small_image : avatar_.toStdString();
+    a.small_text = game_.small_text;
+    // The game's name as the short status instead of "Playing ROBLOX".
+    a.status_display = 2;
+    a.start = game_start_ ? game_.start : joined_at_;
+    a.end = game_end_ ? game_.end : 0;
+    if (options_.join_button && !g_server_link.isEmpty()) {
+        a.buttons.emplace_back("Join server", g_server_link.toStdString());
+    }
+    a.buttons.emplace_back("See game page",
+                           QStringLiteral("https://www.roblox.com/games/%1").arg(place_).toStdString());
+    discord_rpc_set(a);
+}
+
+void GameActivity::studio_line(const QString& text) {
+    // "[FLog::CloseDataModel] Setting place ID <id>": a published place.
+    static const QRegularExpression place_id(QStringLiteral(R"(\[FLog::CloseDataModel\] Setting place ID (\d+))"));
+    // "[FLog::RobloxDocManager] Setting current doc to type <type>".
+    static const QRegularExpression doc_type(
+        QStringLiteral(R"(\[FLog::RobloxDocManager\] Setting current doc to type (-?\d+))"));
+    if (const auto match = place_id.match(text); match.hasMatch()) {
+        const QString place = match.captured(1);
+        if (place == place_) return;
+        ++generation_;
+        place_ = place == QLatin1String("0") ? QString() : place;
+        if (!place_.isEmpty()) std::printf("stud: Studio opened place %s\n", qPrintable(place_));
+        name_.clear();
+        icon_.clear();
+        creator_.clear();
+        publish();
+        if (!place_.isEmpty()) look_up(place_);
+        return;
+    }
+    if (const auto match = doc_type.match(text); match.hasMatch()) {
+        const int type = match.captured(1).toInt();
+        if (type == studio_doc_) return;
+        if (type == -1 || studio_doc_ == -1 || studio_doc_ == -2) studio_since_ = now_seconds();
+        if (type == -1) {
+            ++generation_;
+            place_.clear();
+            name_.clear();
+            icon_.clear();
+        }
+        studio_doc_ = type;
+        std::printf("stud: Studio shows %s\n", type == -1 ? "its start page" : type == 2 ? "a script" : "a place");
+        publish();
+        return;
+    }
+    const bool opened = text.contains(QStringLiteral("[FLog::PlaceManager] Start to open place"));
+    const bool closed = text.contains(QStringLiteral("PlaceManager::closeCurrentPlayDoc"));
+    if (!opened && !closed) return;
+    studio_editing_ = opened;
+    studio_since_ = now_seconds();
+    publish();
+}
+
+void GameActivity::fetch(const QString& url, std::function<void(const QJsonObject&)> done) {
+    QNetworkRequest request{QUrl(url)};
+    request.setHeader(QNetworkRequest::UserAgentHeader, QStringLiteral("Stud/" STUD_VERSION));
+    request.setTransferTimeout(10000);
+    QNetworkReply* reply = net_.get(request);
+    connect(reply, &QNetworkReply::finished, this, [reply, done = std::move(done)]() {
+        reply->deleteLater();
+        if (reply->error() != QNetworkReply::NoError) return;
+        done(QJsonDocument::fromJson(reply->readAll()).object());
+    });
+}
+
+void GameActivity::asset_image(qint64 asset, std::function<void(const QString&)> done) {
+    fetch(QStringLiteral("https://thumbnails.roblox.com/v1/assets?assetIds=%1&size=512x512&format=Png")
+              .arg(asset),
+          [done = std::move(done)](const QJsonObject& json) {
+              if (const QString url = first_image_url(json); !url.isEmpty()) done(url);
+          });
+}
+
+}  // namespace stud::ui

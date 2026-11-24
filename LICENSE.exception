@@ -1,0 +1,53 @@
+Additional permission under GNU AGPL version 3 section 7
+========================================================
+
+Stud is licensed under the GNU Affero General Public License, version 3
+or later; the full text is in LICENSE. This file adds a permission on top
+of it. It only ever grants: if you never rely on it, Stud is plain AGPLv3
+to you, unchanged.
+
+
+The permission
+--------------
+
+  As an additional permission under section 7 of the GNU Affero General
+  Public License version 3, the copyright holders of Stud give you
+  permission to link or combine Stud with the Roblox Engine, and to
+  convey the resulting work.
+
+  "The Roblox Engine" means the software contained in the Roblox
+  application packages published by Roblox Corporation, among them the
+  Roblox player and Roblox Studio, and any library loaded from them:
+  software under terms incompatible with the GNU Affero General Public
+  License, which Stud neither includes nor distributes, and which is
+  downloaded from Roblox Corporation's own servers onto the machine of
+  the person running Stud.
+
+  You must still comply with the GNU Affero General Public License in
+  all respects for all of the code used other than the Roblox Engine.
+
+  If you modify Stud, you may extend this permission to your version,
+  but you are not obliged to. If you do not wish to, delete this
+  statement from your version.
+
+
+Why it exists
+-------------
+
+Stud starts the Roblox client and works alongside it: it writes the
+client's settings and content files, and reads its output. Whether that
+makes a combined work whose distribution the AGPL would forbid is the old
+question about combining with proprietary code, and it is a question
+nobody involved should have to spend time on.
+
+In Stud's case there is a good argument that it never arises. The client
+runs as a process of its own under Rosemary, with none of Stud's code
+loaded into it. Stud does not ship the client or mirror it: it is
+downloaded from Roblox's own servers onto the machine of the person
+running Stud, so whatever combination happens, happens there and is
+never conveyed to anyone. Every binary Stud does redistribute, Rosemary
+among them, ships with its own licence and notice.
+
+This permission is here so that argument does not have to be made. A
+distribution packaging Stud, and anyone building on it, can rely on the
+grant instead of on a reading.

@@ -1,0 +1,71 @@
+# Maintainer: CatPieLeaf <catpieleaf@proton.me>
+#
+# Builds Stud from source, for local `makepkg -si`. Not the AUR package
+# (PKGBUILD.stud-bin is): Rosemary's cargo build downloads dependencies, which a
+# clean chroot can't.
+
+pkgname=stud
+pkgver=2.0.8
+pkgrel=1
+pkgdesc="Play and create games on Roblox"
+arch=('x86_64')
+url="https://github.com/CatPieLeaf/Stud"
+license=('AGPL-3.0-or-later')
+# SDL3 3.4+ is opened by name, not linked, so it's listed explicitly.
+depends=(
+  'gamemode'
+  'qt6-base'
+  'wpewebkit'
+  'sdl3'
+  'vulkan-icd-loader'
+  'curl'
+  'openssl'
+  'libsecret'
+  'zlib'
+  'libxkbcommon'
+  'systemd-libs'
+  'glibc'
+  'gcc-libs'
+  'hicolor-icon-theme'
+  'ffmpeg'
+)
+makedepends=(
+  'cmake'
+  'ninja'
+  'git'
+  'rust'
+  'shaderc'
+)
+optdepends=(
+  'mangohud: the performance overlay Stud can switch on in Settings'
+)
+source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/$pkgver.tar.gz")
+# Replaced by CI at release time.
+sha256sums=('27d6d02baf74627d443a536eafe6e32f2f6d7e504604ca0cad050eefced4bc73')
+
+build() {
+  cd "Stud-$pkgver"
+  cmake -S . -B build -G Ninja \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DSTUD_VERSION="$pkgver"
+  cmake --build build
+}
+
+check() {
+  cd "Stud-$pkgver"
+  ctest --test-dir build --output-on-failure
+}
+
+package() {
+  cd "Stud-$pkgver"
+  DESTDIR="$pkgdir" cmake --install build
+
+  # Arch has no /usr/libexec; stud-ui looks for Rosemary in lib/stud too.
+  if [ -d "$pkgdir/usr/libexec/stud" ]; then
+    mkdir -p "$pkgdir/usr/lib"
+    cp -a "$pkgdir/usr/libexec/stud" "$pkgdir/usr/lib/stud-helpers"
+    cp -a "$pkgdir/usr/lib/stud-helpers/." "$pkgdir/usr/lib/stud/"
+    rm -rf "$pkgdir/usr/lib/stud-helpers" "$pkgdir/usr/libexec"
+  fi
+}
