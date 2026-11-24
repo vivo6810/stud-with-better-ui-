@@ -19,8 +19,8 @@ chmod +x Stud-x86_64.AppImage
 ./Stud-x86_64.AppImage
 ```
 
-Only run builds you trust. This fork's release checks and AppImage update metadata
-point to this repository, not the upstream project's binaries.
+Only run builds you trust. This fork's release checks point to this repository, not the upstream project's
+binaries. Update notifications open the release page for manual download.
 
 ## Interface
 
@@ -32,8 +32,7 @@ point to this repository, not the upstream project's binaries.
   slow-loading hints, cancellation and retry for release notes.
 - Existing graphics, customization, history, FFlags and diagnostics retained.
 
-Settings categories can be filtered by name. The motion preference is saved
-immediately; other launcher settings use **Save changes**.
+Settings categories can be filtered by name. All launcher preferences, including reduced motion, use **Save changes**.
 
 ## How it works
 
@@ -45,8 +44,13 @@ No Roblox client is distributed in this repository.
 ## Build the AppImage
 
 The AppImage workflow runs on pull requests, main and Arena branch pushes, manual
-runs, and published releases. Successful runs upload an AppImage and `.zsync`
-artifact. Published releases attach these same files to the release.
+runs, and published releases. Successful runs prepare `Stud-x86_64.AppImage` and `sourcecode.zip` (the matching
+tracked source, without build dependencies). Published releases attach these two
+files as direct downloads; the AppImage is not wrapped in a ZIP. GitHub also
+adds its own automatic source ZIP/tar.gz links, which cannot be removed.
+
+Actions artifacts are still downloaded as ZIP containers by GitHub. For a direct
+AppImage download, use the **Releases** page after a release build succeeds.
 
 Locally, with Docker or Podman installed:
 

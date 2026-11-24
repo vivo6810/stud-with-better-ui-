@@ -30,13 +30,14 @@ as proof of a network failure.
 
 The settings interface now has shared flat styling, a category filter, generous
 spacing, page reveals, and a persistent reduced-motion preference in General.
-The preference is stored separately in Qt's Stud/Interface settings; restart
+The preference is stored separately in Qt's Stud/Interface settings after a successful Save; restart
 for all already-running animations to stop. Existing runtime settings and data
 formats are preserved.
 
 The AppImage workflow builds PRs, branch pushes, manual runs and releases;
-only a release event can publish. All launcher update endpoints and embedded
-AppImage update metadata point to this fork. Legacy package recipes remain as
+only a release event can publish. All launcher update checks point to this fork; updates open its release page.
+Releases attach only the standalone AppImage and matching sourcecode.zip.
+No zsync metadata is published or requested. Legacy package recipes remain as
 reference but the release workflow no longer publishes those formats.
 
 Static checks are recorded in the implementation response. No compiled or visual

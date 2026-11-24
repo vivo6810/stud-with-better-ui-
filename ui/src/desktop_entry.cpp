@@ -1,4 +1,6 @@
 #include "desktop_entry.h"
+#include "studio_associations.h"
+#include <QSaveFile>
 
 #include <QCoreApplication>
 #include <QDir>
@@ -37,6 +39,30 @@ QString rewrite_exec(const QString& value, const QString& program) {
     const int space = value.indexOf(QLatin1Char(' '));
     const QString args = space < 0 ? QString() : value.mid(space);
     return desktop_exec_quote(program) + args;
+}
+
+void remove_studio_integration(const QString& apps_dir, const QString& app_id) {
+    QFile::remove(apps_dir + QLatin1Char('/') + app_id + QStringLiteral(".Studio.desktop"));
+    const QString config = QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation);
+    for (const QString& dir : {config, apps_dir}) {
+        QDir directory(dir);
+        const QStringList lists = directory.entryList({QStringLiteral("*mimeapps.list")}, QDir::Files);
+        for (const QString& name : lists) {
+            const QString path = directory.filePath(name);
+            QFile input(path);
+            if (!input.open(QIODevice::ReadOnly | QIODevice::Text)) continue;
+            const QString original = QString::fromUtf8(input.readAll());
+            input.close();
+            const QString cleaned = without_studio_associations(original.split(QLatin1Char('\n')), app_id)
+                                        .join(QLatin1Char('\n'));
+            if (cleaned == original) continue;
+            QSaveFile output(path);
+            const QByteArray bytes = cleaned.toUtf8();
+            if (!output.open(QIODevice::WriteOnly) || output.write(bytes) != bytes.size() || !output.commit()) {
+                std::fprintf(stderr, "stud: could not clean Studio associations in %s\n", qPrintable(path));
+            }
+        }
+    }
 }
 
 }  // namespace
@@ -196,6 +222,8 @@ int install_desktop_entry() {
                      qPrintable(apps_dir));
         return 1;
     }
+
+    remove_studio_integration(apps_dir, app_id);
 
     // Icons first: the entry points Icon= at them by absolute path.
     QHash<QString, QString> largest;

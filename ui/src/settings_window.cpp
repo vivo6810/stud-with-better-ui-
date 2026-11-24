@@ -203,12 +203,9 @@ SettingsWindow::SettingsWindow(QWidget* parent) : QWidget(parent) {
 
     // ---- General -------------------------------------------------------
     auto* general = add_tab("General");
-    auto* reduceMotion = new QCheckBox(QStringLiteral("Reduce motion (takes full effect after restart)"), this);
-    reduceMotion->setChecked(reduced_motion());
-    general->addWidget(reduceMotion);
-    connect(reduceMotion, &QCheckBox::toggled, this, [](bool enabled) {
-        QSettings(QStringLiteral("Stud"), QStringLiteral("Interface")).setValue(QStringLiteral("reduceMotion"), enabled);
-    });
+    reduceMotionCheck_ = new QCheckBox(QStringLiteral("Reduce motion (takes full effect after restart)"), this);
+    reduceMotionCheck_->setChecked(reduced_motion());
+    general->addWidget(reduceMotionCheck_);
     trayCheck_ = new QCheckBox("Show in system tray", this);
     general->addWidget(trayCheck_);
     playerDirectlyCheck_ = new QCheckBox("Open Roblox Player directly, without the welcome page", this);
@@ -1531,6 +1528,13 @@ bool SettingsWindow::onSaveClicked() {
     flagsEdit_->setPlainText(QString::fromUtf8(flags_text));
     try {
         stud::config::save_settings(stud::config::default_config_path(), settings);
+        QSettings interface(QStringLiteral("Stud"), QStringLiteral("Interface"));
+        interface.setValue(QStringLiteral("reduceMotion"), reduceMotionCheck_->isChecked());
+        interface.sync();
+        if (interface.status() != QSettings::NoError) {
+            statusLabel_->setText(QStringLiteral("Player settings saved, but the motion preference could not be saved."));
+            return false;
+        }
         statusLabel_->setText(stud_session_is_running()
                                   ? "Settings saved. They apply the next time Roblox starts."
                                   : "Settings saved.");

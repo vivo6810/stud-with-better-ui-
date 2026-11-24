@@ -72,6 +72,7 @@ private:
     QLineEdit* wrapperEdit_;
     QPlainTextEdit* environmentEdit_;
     QCheckBox* trayCheck_;
+    QCheckBox* reduceMotionCheck_;
     QCheckBox* playerDirectlyCheck_;
     QSlider* backgroundFpsSlider_;
     QLabel* backgroundFpsLabel_;

@@ -64,6 +64,11 @@ protected:
         painter.setPen(Qt::NoPen);
         painter.setBrush(isEnabled() ? QColor(QStringLiteral("#335fff")) : palette().color(QPalette::Mid));
         painter.drawRoundedRect(face, 10, 10);
+        if (hasFocus()) {
+            painter.setBrush(Qt::NoBrush);
+            painter.setPen(QPen(palette().color(QPalette::WindowText), 2, Qt::DashLine));
+            painter.drawRoundedRect(face.adjusted(-4, -4, 4, 4), 12, 12);
+        }
         painter.setPen(Qt::white);
         QFont label = font();
         label.setBold(true);

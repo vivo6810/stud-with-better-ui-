@@ -21,8 +21,7 @@ public:
     static bool updateAvailable();
     static QString latestVersion();
 
-    // An AppImage downloads the new one, checks it against the .zsync's SHA-1 and
-    // replaces itself for the next start; other packages open the release page.
+    // Opens the release page to download the standalone AppImage.
     static void open();
 
     static UpdateCheck* instance();

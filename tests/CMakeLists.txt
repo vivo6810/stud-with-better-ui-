@@ -1,4 +1,9 @@
 if(STUD_BUILD_UI)
+    add_executable(stud_studio_associations_test studio_associations_test.cpp)
+    target_include_directories(stud_studio_associations_test PRIVATE ../ui/src)
+    target_link_libraries(stud_studio_associations_test PRIVATE Qt6::Core)
+    add_test(NAME studio_associations_test COMMAND stud_studio_associations_test)
+
     find_package(Qt6 REQUIRED COMPONENTS DBus)
     # These need desktop services and skip without them, e.g. in a chroot or CI container.
     add_executable(stud_gpu_enum_test gpu_enum_test.cpp)
