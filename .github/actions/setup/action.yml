@@ -1,0 +1,67 @@
+# The version being built and Rosemary's cached downloads. Run after actions/checkout.
+name: Stud setup
+description: Version to build, plus Rust and Rosemary's Cargo downloads
+
+inputs:
+  rosemary:
+    description: Set up Rust and restore Rosemary's Cargo downloads
+    default: "true"
+
+outputs:
+  cargo-key:
+    description: The Cargo cache key for Rosemary's branch head
+    value: ${{ steps.rosemary.outputs.key }}
+  cargo-hit:
+    description: "\"true\" when that exact key was restored"
+    value: ${{ steps.cargo.outputs.cache-hit }}
+
+runs:
+  using: composite
+  steps:
+    - name: Version
+      # The tag, or main's CMakeLists.txt version on a manual run. VERSION drops the
+      # leading "v" for rpm and AppStream.
+      shell: bash
+      run: |
+        tag="${TAG:-$(sed -n 's/^project(Stud VERSION \([0-9.]*\).*/\1/p' CMakeLists.txt)}"
+        [ -n "$tag" ] || { echo "::error::no tag and no version in CMakeLists.txt"; exit 1; }
+        echo "TAG=$tag" >> "$GITHUB_ENV"
+        echo "VERSION=${tag#v}" >> "$GITHUB_ENV"
+
+    - name: Rust
+      # Ubuntu's Rust is too old for Rosemary, so that job gets rustup's stable here.
+      if: inputs.rosemary == 'true'
+      shell: bash
+      run: |
+        if ! command -v cargo >/dev/null; then
+          curl --proto '=https' --tlsv1.2 -sSf --retry 5 --retry-all-errors https://sh.rustup.rs |
+            sh -s -- -y --profile minimal --default-toolchain stable
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+        fi
+
+    - name: Work out the Cargo cache key
+      # Keyed by Rosemary's branch head; a new commit restores the previous key's downloads.
+      if: inputs.rosemary == 'true'
+      id: rosemary
+      shell: bash
+      run: |
+        repo="$(sed -n 's/^set(STUD_ROSEMARY_REPOSITORY "\([^"]*\)".*/\1/p' CMakeLists.txt)"
+        branch="$(sed -n 's/^set(STUD_ROSEMARY_BRANCH "\([^"]*\)".*/\1/p' CMakeLists.txt)"
+        sha="$(git ls-remote "$repo" "refs/heads/$branch" | cut -f1)"
+        [ -n "$sha" ] || { echo "::error::cannot read $branch of $repo"; exit 1; }
+        echo "key=cargo-$sha" >> "$GITHUB_OUTPUT"
+
+    - name: Restore Rosemary's Cargo downloads
+      # Restore only: the Dependency cache workflow saves from main, whose caches every
+      # ref sees, and deletes the older ones. Downloads are the same in every container;
+      # the target directory isn't. The paths must match that workflow's save.
+      if: inputs.rosemary == 'true'
+      id: cargo
+      uses: actions/cache/restore@v6
+      with:
+        path: |
+          ~/.cargo/registry/index
+          ~/.cargo/registry/cache
+          ~/.cargo/git/db
+        key: ${{ steps.rosemary.outputs.key }}
+        restore-keys: cargo-

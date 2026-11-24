@@ -1,0 +1,117 @@
+# Fills the caches releases restore: Rosemary's Cargo downloads, and the Flatpak's
+# WPE WebKit build (its modules before Rosemary). Only the default branch's caches
+# are visible to every ref, so run it from main; releases only restore. Each run
+# deletes every other cache, so nothing stale is picked up. GitHub evicts caches
+# unused for a week, so run it before a release after a quiet spell.
+
+name: Dependency cache
+
+on:
+  # Manual only.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dependency-cache
+  # A WPE build takes hours; a newer run waits for it instead of throwing it away.
+  cancel-in-progress: false
+
+jobs:
+  cargo:
+    name: Rosemary's Cargo downloads
+    runs-on: ubuntu-latest
+    outputs:
+      key: ${{ steps.setup.outputs.cargo-key }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Version, Rust and the Cargo cache
+        id: setup
+        uses: ./.github/actions/setup
+
+      - name: Fetch Rosemary's dependencies
+        # Into ~/.cargo, on top of whatever older key was restored; Cargo.lock decides what's fetched.
+        if: steps.setup.outputs.cargo-hit != 'true'
+        run: |
+          repo="$(sed -n 's/^set(STUD_ROSEMARY_REPOSITORY "\([^"]*\)".*/\1/p' CMakeLists.txt)"
+          branch="$(sed -n 's/^set(STUD_ROSEMARY_BRANCH "\([^"]*\)".*/\1/p' CMakeLists.txt)"
+          git clone --depth 1 --branch "$branch" "$repo" "$RUNNER_TEMP/rosemary"
+          cargo fetch --locked --manifest-path "$RUNNER_TEMP/rosemary/Cargo.toml"
+          du -sh ~/.cargo/registry ~/.cargo/git
+
+      - name: Save them
+        # The same paths as the setup action's restore.
+        if: steps.setup.outputs.cargo-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+          key: ${{ steps.setup.outputs.cargo-key }}
+
+  flatpak-wpe:
+    name: WPE WebKit for the Flatpak
+    runs-on: ubuntu-latest
+    container:
+      # The release's Flatpak job image, so flatpak-builder's version and the key match.
+      image: ghcr.io/flathub-infra/flatpak-github-actions:kde-6.10
+      options: --privileged
+    outputs:
+      key: ${{ steps.key.outputs.key }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Work out the WPE cache key
+        id: key
+        run: |
+          flatpak remote-add --if-not-exists --system flathub \
+            https://dl.flathub.org/repo/flathub.flatpakrepo
+          key=$(tools/flatpak-wpe-cache-key.sh)
+          echo "key=$key" >> "$GITHUB_OUTPUT"
+
+      - name: Restore the WPE build
+        # A hit also counts as use, which keeps the cache from being evicted.
+        id: restore
+        uses: actions/cache/restore@v6
+        with:
+          path: .flatpak-builder
+          key: ${{ steps.key.outputs.key }}
+
+      - name: Build the modules before Rosemary
+        # Rosemary and Stud aren't fetched or built, so the cache holds only WPE and what it needs.
+        if: steps.restore.outputs.cache-hit != 'true'
+        run: |
+          flatpak-builder --force-clean --disable-rofiles-fuse --stop-at=rosemary \
+            --install-deps-from=flathub build-dir \
+            packaging/flatpak/io.github.catpieleaf.Stud.yml
+
+      - name: Save it
+        if: steps.restore.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: .flatpak-builder
+          key: ${{ steps.key.outputs.key }}
+
+  cleanup:
+    name: Delete the other caches
+    needs: [cargo, flatpak-wpe]
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      CARGO_KEY: ${{ needs.cargo.outputs.key }}
+      WPE_KEY: ${{ needs.flatpak-wpe.outputs.key }}
+    steps:
+      - name: Delete every cache but the two above, on every ref
+        # Older Cargo keys would match the releases' restore-keys, and tag caches are never read.
+        run: |
+          gh api --paginate "repos/$GITHUB_REPOSITORY/actions/caches" \
+            --jq '.actions_caches[] | select(.key != env.CARGO_KEY and .key != env.WPE_KEY) | "\(.id) \(.ref) \(.key)"' |
+          while read -r id ref key; do
+            echo "deleting $key ($ref)"
+            gh api -X DELETE "repos/$GITHUB_REPOSITORY/actions/caches/$id"
+          done

@@ -1,0 +1,132 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: Stud
+Upstream-Contact: CatPieLeaf <catpieleaf@proton.me>
+Source: https://github.com/CatPieLeaf/Stud
+Comment:
+ Stud contains no Roblox code and distributes none. It downloads Roblox's
+ macOS client from Roblox's own servers onto the machine it runs on, and
+ that client is not part of this package.
+ .
+ The full text of every licence named here ships in the binary package
+ under /usr/share/licenses/stud/, one directory per component. Where a
+ licence is long and already on the system, this file names that path
+ rather than repeating it.
+
+Files: *
+Copyright: 2026 CatPieLeaf <catpieleaf@proton.me>
+License: AGPL-3.0-or-later with Roblox-Engine exception
+
+Files: (fetched at build time, not in this source tree)
+Copyright: 2013-2025 Rich Geldreich, RAD Game Tools and Valve Software
+License: MIT
+Comment:
+ Compiled into the launcher: miniz.
+
+Files: (fetched at build time, not in this source tree: Rosemary)
+Copyright: The Rosemary contributors
+License: GPL-3.0-only
+Comment:
+ /usr/libexec/stud/rosemary, which runs the macOS client. Built from
+ https://github.com/CatPieLeaf/rosemary-stud, branch stud: upstream
+ Rosemary (https://github.com/microlift/rosemary) with Stud's changes on
+ top. That branch is its Corresponding Source. AGPLv3 section 13 permits
+ combining it with Stud and conveying the result.
+
+Files: (fetched at build time, not in this source tree: Rosemary's upscaler shaders)
+Copyright: 2017-2021 Advanced Micro Devices, Inc.
+           2023 Qualcomm Technologies, Inc.
+           2017-2023 bjin
+License: MIT and BSD-3-Clause and LGPL-3.0-or-later
+Comment:
+ Compiled into Rosemary: FSR1's RCAS (MIT), Snapdragon Game Super
+ Resolution (BSD-3-Clause), and RAVU-Zoom from mpv-prescalers
+ (LGPL-3.0-or-later), conveyed under the GPL as LGPLv3 section 2(b)
+ permits. The RAVU-Zoom hook its shader and weight tables come from is in
+ the fork above, crates/metal/upscale/.
+
+License: AGPL-3.0-or-later with Roblox-Engine exception
+ This program is free software: you can redistribute it and/or modify it
+ under the terms of the GNU Affero General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or (at
+ your option) any later version.
+ .
+ This program is distributed in the hope that it will be useful, but
+ WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero
+ General Public License for more details.
+ .
+ You should have received a copy of the GNU Affero General Public License
+ along with this program. If not, see <https://www.gnu.org/licenses/>.
+ The full text is in /usr/share/licenses/stud/LICENSE.
+ .
+ ADDITIONAL PERMISSION UNDER SECTION 7: the copyright holders give you
+ permission to link or combine Stud with the Roblox Engine, and to convey
+ the resulting work. "The Roblox Engine" means the software contained in
+ the Roblox application package published by Roblox Corporation, and any
+ library loaded from it, which Stud neither includes nor distributes. You
+ must still comply with the GNU Affero General Public License in all
+ respects for all of the code used other than the Roblox Engine. The full
+ statement is in /usr/share/licenses/stud/LICENSE.exception.
+
+License: GPL-3.0-only
+ This program is free software: you can redistribute it and/or modify it
+ under the terms of the GNU General Public License as published by the
+ Free Software Foundation, version 3.
+ .
+ On Debian systems the full text is at /usr/share/common-licenses/GPL-3,
+ and Rosemary's own copy is in /usr/share/licenses/stud/rosemary/.
+
+License: MIT
+ Permission is hereby granted, free of charge, to any person obtaining a
+ copy of this software and associated documentation files (the
+ "Software"), to deal in the Software without restriction, including
+ without limitation the rights to use, copy, modify, merge, publish,
+ distribute, sublicense, and/or sell copies of the Software, and to
+ permit persons to whom the Software is furnished to do so, subject to
+ the following conditions:
+ .
+ The above copyright notice and this permission notice shall be included
+ in all copies or substantial portions of the Software.
+ .
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+License: BSD-3-Clause
+ Redistribution and use in source and binary forms, with or without
+ modification, are permitted provided that the following conditions are
+ met:
+ .
+   * Redistributions of source code must retain the above copyright
+     notice, this list of conditions and the following disclaimer.
+   * Redistributions in binary form must reproduce the above copyright
+     notice, this list of conditions and the following disclaimer in the
+     documentation and/or other materials provided with the distribution.
+   * Neither the name of the copyright holder nor the names of its
+     contributors may be used to endorse or promote products derived from
+     this software without specific prior written permission.
+ .
+ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+ PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
+ TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+License: LGPL-3.0-or-later
+ This library is free software: you can redistribute it and/or modify it
+ under the terms of the GNU Lesser General Public License as published
+ by the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
+ .
+ On Debian systems the full text is at
+ /usr/share/common-licenses/LGPL-3.

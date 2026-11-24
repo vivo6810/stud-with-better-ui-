@@ -1,0 +1,45 @@
+# Maintainer: CatPieLeaf <catpieleaf@proton.me>
+#
+# Not for the AUR: CI packages an existing install tree (STUD_DESTDIR) with it.
+
+pkgname=stud
+pkgver=2.0.8
+pkgrel=1
+pkgdesc="Play and create games on Roblox"
+arch=('x86_64')
+url="https://github.com/CatPieLeaf/Stud"
+license=('AGPL-3.0-or-later')
+# Must match the source PKGBUILD's list.
+depends=(
+  'gamemode'
+  'qt6-base'
+  'wpewebkit'
+  'sdl3'
+  'vulkan-icd-loader'
+  'curl'
+  'openssl'
+  'libsecret'
+  'zlib'
+  'libxkbcommon'
+  'systemd-libs'
+  'glibc'
+  'gcc-libs'
+  'hicolor-icon-theme'
+  'ffmpeg'
+)
+optdepends=(
+  'mangohud: the performance overlay Stud can switch on in Settings'
+)
+options=(!strip !debug emptydirs)
+
+package() {
+  cp -a "${STUD_DESTDIR:?set STUD_DESTDIR to the install tree}"/. "$pkgdir"/
+
+  # Arch has no /usr/libexec; stud-ui looks for Rosemary in lib/stud too.
+  if [ -d "$pkgdir/usr/libexec/stud" ]; then
+    mkdir -p "$pkgdir/usr/lib"
+    cp -a "$pkgdir/usr/libexec/stud" "$pkgdir/usr/lib/stud-helpers"
+    cp -a "$pkgdir/usr/lib/stud-helpers/." "$pkgdir/usr/lib/stud/"
+    rm -rf "$pkgdir/usr/lib/stud-helpers" "$pkgdir/usr/libexec"
+  fi
+}

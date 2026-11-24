@@ -1,0 +1,76 @@
+.TH STUD 1 "November 2026" "Stud @STUD_VERSION@" "User Commands"
+.SH NAME
+stud \- play Roblox on Linux
+.SH SYNOPSIS
+.B stud
+.RI [ URI ]
+.br
+.B stud
+.RB [ \-\-roblox | \-\-studio ]
+.br
+.B stud \-\-settings
+.br
+.B stud \-\-install\-desktop\-entry
+.SH DESCRIPTION
+.B Stud
+runs the real, unmodified Roblox macOS client on a Linux desktop, in its own
+window, with the mouse and keyboard, through Rosemary. There is no emulator
+and no virtual machine: Rosemary runs the client's own x86_64 code and
+supplies the macOS interfaces it expects around it.
+.PP
+Roblox is not included. Stud downloads the client from Roblox's own servers
+and keeps it up to date before each launch, and Roblox remains subject to its
+own terms.
+.PP
+Run with no arguments, Stud asks whether to open Roblox or Roblox Studio.
+Given a
+.BR roblox: ,
+.B roblox\-player:
+or
+.B roblox\-studio:
+URI \- what a browser hands over when you press Play or Edit on the website \-
+it opens straight into that experience.
+.SH OPTIONS
+.TP
+.B \-\-roblox
+Open Roblox without asking.
+.TP
+.B \-\-studio
+Open Roblox Studio without asking.
+.TP
+.B \-\-settings
+Open the Settings window on its own, without launching the client. This is
+what the desktop entry's Settings action runs.
+.TP
+.B \-\-install\-desktop\-entry
+Register Stud as the handler for Roblox's URIs for the current user, so a
+browser can hand a game over to it. A package installs the desktop entry
+system-wide already; this exists for an AppImage or a build tree.
+.SH FILES
+.TP
+.I ~/.config/stud/config.json
+Settings. Written by the Settings window, and safe to edit by hand.
+.TP
+.I ~/.config/stud/flags.json
+FastFlag overrides, written into the client's own settings at launch.
+.TP
+.I ~/.config/stud/customizations/
+Files laid over Roblox's own content (\fIstudio\-customizations/\fR for
+Studio).
+.TP
+.I ~/.local/share/stud/client/
+The macOS client, as Roblox's servers ship it.
+.TP
+.I ~/.local/share/stud/prefix/
+Rosemary's prefix: Roblox's own settings, login and data.
+.TP
+.I ~/.local/state/stud/logs/
+One log per session, Stud's and the client's.
+.SH BUGS
+Report at
+.UR https://github.com/CatPieLeaf/Stud/issues
+.UE .
+.PP
+Stud is free software under the GNU Affero General Public License, version 3
+or later. It is an independent project, not affiliated with, endorsed by or
+supported by Roblox Corporation.

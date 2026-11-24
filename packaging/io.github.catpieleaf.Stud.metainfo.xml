@@ -1,0 +1,403 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.catpieleaf.Stud</id>
+  <launchable type="desktop-id">io.github.catpieleaf.Stud.desktop</launchable>
+  <icon type="stock">io.github.catpieleaf.Stud</icon>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>AGPL-3.0-or-later</project_license>
+
+  <name>Stud</name>
+  <summary>Play and create games on Roblox</summary>
+
+  <description>
+    <p>Stud runs the macOS Roblox Player and Studio on Linux through Rosemary.</p>
+    <p>Features:</p>
+    <ul>
+      <li>Updates Roblox from Roblox's own servers before each launch</li>
+      <li>Game history and server list</li>
+      <li>FastFlags, upscaling and customizations</li>
+      <li>Discord Rich Presence</li>
+    </ul>
+    <p>Roblox is not included: Stud downloads it from Roblox's own servers, and it remains subject to Roblox's terms.</p>
+    <p>Stud is not affiliated with Roblox Corporation.</p>
+  </description>
+
+  <categories>
+    <category>Game</category>
+  </categories>
+
+  <keywords>
+    <keyword>roblox</keyword>
+    <keyword>game</keyword>
+    <keyword>gaming</keyword>
+    <keyword>launcher</keyword>
+    <keyword>studio</keyword>
+  </keywords>
+
+  <screenshots>
+    <screenshot type="default">
+      <caption>Roblox Player running on Stud</caption>
+      <image type="source" width="1666" height="1043">https://raw.githubusercontent.com/CatPieLeaf/Stud/main/packaging/screenshots/home.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Roblox Studio running on Stud</caption>
+      <image type="source" width="1763" height="1098">https://raw.githubusercontent.com/CatPieLeaf/Stud/main/packaging/screenshots/studio.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>The "Tunneler" game on Roblox</caption>
+      <image type="source" width="1666" height="1043">https://raw.githubusercontent.com/CatPieLeaf/Stud/main/packaging/screenshots/tunneler.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>The "Innovation Thermal Power Plant" game on Roblox</caption>
+      <image type="source" width="1666" height="1043">https://raw.githubusercontent.com/CatPieLeaf/Stud/main/packaging/screenshots/innovationtpp.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>The "Toons Universe" game on Roblox</caption>
+      <image type="source" width="1666" height="1043">https://raw.githubusercontent.com/CatPieLeaf/Stud/main/packaging/screenshots/toonsuniverse.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Stud's welcome screen</caption>
+      <image type="source" width="644" height="524">https://raw.githubusercontent.com/CatPieLeaf/Stud/main/packaging/screenshots/welcome.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Stud's settings</caption>
+      <image type="source" width="1007" height="781">https://raw.githubusercontent.com/CatPieLeaf/Stud/main/packaging/screenshots/settings.png</image>
+    </screenshot>
+  </screenshots>
+
+  <url type="homepage">https://github.com/CatPieLeaf/Stud</url>
+  <url type="bugtracker">https://github.com/CatPieLeaf/Stud/issues</url>
+  <url type="vcs-browser">https://github.com/CatPieLeaf/Stud</url>
+
+  <developer id="io.github.catpieleaf">
+    <name>CatPieLeaf</name>
+  </developer>
+
+  <branding>
+    <color type="primary" scheme_preference="light">#9c40bf</color>
+    <color type="primary" scheme_preference="dark">#3d1c4a</color>
+  </branding>
+
+  <supports>
+    <control>keyboard</control>
+    <control>pointing</control>
+    <display_length compare="ge">768</display_length>
+  </supports>
+
+  <content_rating type="oars-1.1">
+    <content_attribute id="social-chat">intense</content_attribute>
+    <content_attribute id="social-audio">intense</content_attribute>
+    <content_attribute id="social-info">moderate</content_attribute>
+    <content_attribute id="money-purchasing">intense</content_attribute>
+    <content_attribute id="violence-cartoon">moderate</content_attribute>
+  </content_rating>
+
+  <releases>
+    <release version="2.0.8" date="2026-11-24">
+      <description>
+        <ul>
+          <li>Fixed: the AppImage crashed when Roblox opened a web page, such as signing in</li>
+          <li>Fixed: frames jittered back and forth on older NVIDIA cards under Wayland (#39)</li>
+          <li>Changed: environment variables set in Settings now apply to Stud itself too</li>
+          <li>New: clicking the logo on the welcome screen shows another quote</li>
+        </ul>
+      </description>
+    </release>
+    <release version="2.0.7" date="2026-11-24">
+      <description>
+        <ul>
+          <li>Fixed: the AppImage crashed when Roblox opened a web page, such as signing in</li>
+          <li>Fixed: frames jittered back and forth on older NVIDIA cards under Wayland (#39)</li>
+          <li>Changed: environment variables set in Settings now apply to Stud itself too</li>
+          <li>New: clicking the logo on the welcome screen shows another quote</li>
+        </ul>
+      </description>
+    </release>
+    <release version="2.0.6" date="2026-11-23">
+      <description>
+        <ul>
+          <li>New: the Customizations page is redesigned, with previews and ready-made cursors, avatar backgrounds and emoji fonts</li>
+          <li>New: a setting to use jsDelivr's mirror instead of GitHub, and Stud falls back to the other host when one fails</li>
+          <li>Changed: smaller downloads for every package</li>
+          <li>Changed: the Flatpak sends notifications through the desktop portal and no longer asks for direct access to the notification service</li>
+          <li>Changed: the app icons fit Flathub's icon grid</li>
+          <li>Fixed: web pages showed no hand over links or i-beams on ext boxes, and text boxes could need several clicks</li>
+          <li>Fixed: the upscaler didn't work properly when the render resolution was below 100%</li>
+          <li>Fixed: movement could stop or get stuck while turning the camera with right-click (#42)</li>
+          <li>Fixed: a gamescope launch wrapper couldn't start in the Flatpak</li>
+          <li>Fixed: folder buttons did nothing in the Flatpak (broken in 2.0.5) and in cpak (#38)</li>
+          <li>Fixed: Export logs and other file dialogs froze in cpak</li>
+          <li>Fixed: the rpm conflicted with RPM Fusion's FFmpeg (#39)</li>
+        </ul>
+      </description>
+    </release>
+    <release version="2.0.5" date="2026-11-20">
+      <description>
+        <ul>
+          <li>New: Roblox's sign-in and web pages run on WPE WebKit, replacing QtWebEngine</li>
+          <li>New: notifications show as a Mac-style banner inside Roblox while it's fullscreen</li>
+          <li>Changed: new installs use the desktop's own title bar by default</li>
+          <li>Changed: much smaller packages</li>
+          <li>Changed: on Fedora without Terrapkg, the welcome page shows how to add WPE WebKit when it's missing</li>
+          <li>Fixed: Settings could save "No GPUs found" as the chosen GPU</li>
+          <li>Fixed: the buttons that open folders and links did nothing in the cpak container</li>
+          <li>Stud is now on Flathub</li>
+        </ul>
+      </description>
+    </release>
+    <release version="2.0.4" date="2026-11-19">
+      <description>
+        <ul>
+          <li>Fixed: the GPU setting showed no GPUs on some systems</li>
+          <li>Fixed: Alt-Tab away from Roblox brought Roblox straight back to the front</li>
+          <li>Fixed: Roblox could crash right after leaving a game</li>
+        </ul>
+      </description>
+    </release>
+    <release version="2.0.3" date="2026-11-19">
+      <description>
+        <ul>
+          <li>New: classic cursors (2006 and 2013), character sounds and avatar editor background, downloaded from Bloxstrap</li>
+          <li>New: a Code font setting, separate from the game font</li>
+          <li>New: your Roblox avatar in Discord Rich Presence, in games and on the home screen</li>
+          <li>New: Close Roblox when leaving a game</li>
+          <li>New: your Roblox login is kept in your system keyring between sessions</li>
+          <li>New: GPUs are listed by name even without Vulkan, so OpenGL players can pick one</li>
+          <li>Fixed: a custom font turned Chinese, Japanese and Korean text into empty boxes</li>
+          <li>Flatpak: no longer asks for Discord or controller access by default; Settings shows how to allow them</li>
+          <li>cpak: the tray's Copy server link works, once cpak has the tray fix</li>
+        </ul>
+      </description>
+    </release>
+    <release version="2.0.2" date="2026-11-17">
+      <description>
+        <ul>
+          <li>Fixed: Stud didn't start at all on X11 (#36)</li>
+          <li>Fixed: a Roblox window behind other windows took over the cursor, and the home screen reacted, just from the mouse passing over it</li>
+          <li>Fixed: closing Roblox from the Linux title bar froze it and skipped Roblox's own leave screen</li>
+          <li>Fixed: a PlayStation controller pressed every button twice</li>
+          <li>Fixed: Roblox could freeze when leaving a game</li>
+          <li>New: Roblox's sign-in and Studio's web panels now open inside the Roblox window</li>
+          <li>New: a Studio tab in Settings, with Studio's own FastFlags and buttons for its Plugins and Documents folders</li>
+          <li>New: Discord Rich Presence for Studio</li>
+          <li>New: a Presentation setting with VSync, Adaptive VSync, No VSync without tearing, and No VSync</li>
+          <li>New: Ctrl works as Command in Studio, like Studio on Windows</li>
+          <li>Faster: Roblox's main thread gets a higher priority, and its memory uses huge pages</li>
+          <li>Faster: on AMD X3D CPUs, Roblox runs on the cores with the large cache</li>
+        </ul>
+      </description>
+    </release>
+    <release version="2.0.1" date="2026-11-15">
+      <description>
+        <ul>
+          <li>Fixed: Roblox could close on its own every time you launched it after logging in</li>
+          <li>Fixed: Discord Rich Presence switched to "In the Roblox app" after a game teleported you, for example into a lobby</li>
+          <li>New: a Debug page in Settings, to export logs, copy system info, repair Roblox and clear Stud's data</li>
+          <li>When Roblox puts your account on a test channel, Stud now installs that channel's build</li>
+          <li>When Roblox closes before its window opens, Stud now says so instead of closing silently</li>
+        </ul>
+      </description>
+    </release>
+    <release version="2.0.0" date="2026-11-15">
+      <description>
+        <ul>
+          <li>Stud now runs the real Roblox macOS desktop client on Rosemary, instead of the Android app</li>
+          <li>No more APKs: Stud downloads Roblox from Roblox's own servers and keeps it up to date before every launch</li>
+          <li>Stud now has a welcome screen, offering to choose between Roblox Studio and Roblox Player</li>
+          <li>.rbxl and .rbxlx place files open straight in Studio</li>
+          <li>Customizations: textures, sounds, fonts and cursors, plus import from Bloxstrap, Fishstrap and Froststrap</li>
+          <li>FastFlags: profiles, presets, and a warning for non whitelisted fflags.</li>
+          <li>Roblox's own settings (volume, sensitivity, camera...) editable from Stud</li>
+          <li>Server history: see where each server was, and rejoin it</li>
+          <li>Launch wrapper and environment variables, for gamescope, prime-run and the like</li>
+          <li>The AppImage now updates itself</li>
+          <li>Updating from 1.x frees gigabytes: the Android engine, APK and caches are removed, and your settings, FFlags, customizations and logs are kept</li>
+        </ul>
+      </description>
+    </release>
+    <release version="1.2.14" date="2026-11-08">
+      <description>
+        <ul>
+          <li>Fixed: Stud froze for about 8 seconds at every launch, on every GPU</li>
+          <li>Fixed: voice chat stayed on "connecting" forever, or timed out saying it couldn't use the microphone</li>
+          <li>Fixed: Roblox could make every other application's sound crackle or clip</li>
+          <li>Improved: faster loading on AMD GPUs</li>
+          <li>Improved: many more controllers are recognised and mapped correctly</li>
+        </ul>
+      </description>
+    </release>
+    <release version="1.2.13" date="2026-11-06">
+      <description>
+        <ul>
+          <li>Fixed: Windows Graphical Parity turned off without saying so when your APK was older than the Windows client</li>
+          <li>Changed: the README now points to Uptodown and APKMirror for getting an APK</li>
+        </ul>
+      </description>
+    </release>
+    <release version="1.2.12" date="2026-11-06">
+      <description>
+        <ul>
+          <li>Fixed: Plastic surfaces in Windows Graphical Parity could break up into big flat triangles, and looked wrong up close</li>
+          <li>New: Stud reopens the way you left it: windowed, maximized or fullscreen, at the same size</li>
+          <li>New: Roblox's own Fullscreen option in the in-game menu now works</li>
+          <li>F11 and the in-game Fullscreen option now stay in step</li>
+          <li>Better: Windows Graphical Parity looks closer to Windows</li>
+          <li>Better: Stud no longer runs with limits meant for phones</li>
+        </ul>
+      </description>
+    </release>
+    <release version="1.2.11" date="2026-11-05">
+      <description>
+        <ul>
+          <li>Fixed: the game could look blurry in a window on a scaled display (125%, 130%...)</li>
+          <li>Fixed: Discord Rich Presence didn't show if Equibop, Vesktop or Discord opened or restarted after Stud</li>
+          <li>Voice chat: Stud now gives Roblox what it needs for the microphone and calls</li>
+          <li>Fixed: failed launches that left an empty window, or an invisible Stud running forever</li>
+          <li>Fixed: saving Settings could reset settings you'd edited by hand</li>
+          <li>Fixed: the pointer could stay trapped in the window after Alt-Tab or leaving a game</li>
+          <li>Fixed: Ctrl+A, C, X and V in text boxes on AZERTY and Dvorak</li>
+          <li>Fixed: the first paste of a session did nothing on Wayland</li>
+          <li>Old APK copies are now cleaned up, which can free gigabytes</li>
+          <li>Roblox's sandbox is stricter, and logs no longer carry join tickets or your account name</li>
+          <li>Dozens of safety and stability fixes</li>
+        </ul>
+      </description>
+    </release>
+    <release version="1.2.10" date="2026-11-05">
+      <description>
+        <ul>
+          <li>New: logging in and creating accounts now happen on Roblox's own website, inside a Stud window</li>
+          <li>Fixed: the login security check that never finished</li>
+          <li>New: Stud checks a Roblox APK before importing it, and says what's missing if it can't run it</li>
+          <li>Fixed: a crafted link could make Stud send your Roblox session to another website</li>
+          <li>Fixed: music no longer lags for a moment when you open the Esc menu</li>
+          <li>The microphone now only runs while Roblox is actually using it</li>
+          <li>X11: text boxes stay inside Stud's window, OpenGL mode shows its window again, and MangoHud no longer breaks it</li>
+          <li>Discord: Rich Presence now finds Flatpak, Vesktop/Equibop and Snap Discord</li>
+          <li>Multiple monitors: rotated screens and refresh rates are now correct</li>
+          <li>Fixed: rare random crashes, and freezes that never ended</li>
+          <li>Dozens of safety and stability fixes</li>
+        </ul>
+      </description>
+    </release>
+    <release version="1.2.9" date="2026-11-02">
+      <description>
+        <ul>
+          <li>Fixed: the Flatpak started, but Roblox never opened</li>
+          <li>New defaults: HiDPI off, upscaling on (RAVU on Vulkan, SGSR on OpenGL)</li>
+        </ul>
+      </description>
+    </release>
+    <release version="1.2.8" date="2026-11-02">
+      <description>
+        <ul>
+          <li>New setting: HQ Textures (Unstable), in Settings &gt; Graphics</li>
+          <li>Textures and game cursors (like Regretevator's) are sharp instead of blurry and blocky</li>
+          <li>Keyboard layouts: AZERTY walks on ZQSD, and the number row is the hotbar on every layout</li>
+        </ul>
+      </description>
+    </release>
+    <release version="1.2.7" date="2026-11-02">
+      <description>
+        <ul>
+          <li>OpenGL mode rebuilt on gfxstream: MSAA, UI gradients and correct highlight outlines on OpenGL</li>
+          <li>Windows Graphical Parity (Beta) now works in OpenGL mode as well as Vulkan</li>
+          <li>A lot of performance work on the Vulkan path: textures, pipelines, the connection to the engine, and the GPU's own work per frame</li>
+          <li>A loading screen while Stud starts, so there's something to look at before the game window appears</li>
+          <li>Building from source now needs meson</li>
+        </ul>
+      </description>
+    </release>
+    <release version="1.2.6" date="2026-10-24">
+      <description>
+        <ul>
+          <li>New setting, on by default: Windows Graphical Parity (Beta), in Settings &gt; Graphics</li>
+          <li>Parts get the Windows client's materials: reflections, the shine of sunlight on them, and their normal maps</li>
+          <li>Highlight outlines are drawn with High quality MSAA, as they are on Windows</li>
+        </ul>
+      </description>
+    </release>
+    <release version="1.2.5" date="2026-10-24">
+      <description>
+        <ul>
+          <li>New setting, on by default: Windows Graphical Parity (Beta), in Settings &gt; Graphics</li>
+          <li>Parts get the Windows client's materials: reflections, the shine of sunlight on them, and their normal maps</li>
+          <li>Highlight outlines are drawn with High quality MSAA, as they are on Windows</li>
+        </ul>
+      </description>
+    </release>
+    <release version="1.2.4" date="2026-10-23">
+      <description>
+        <ul>
+          <li>Roblox 2.744.1081 opens and plays again</li>
+          <li>A Roblox update that needs an Android function Stud doesn't have yet no longer stops the game from opening</li>
+        </ul>
+      </description>
+    </release>
+    <release version="1.2.3" date="2026-10-23">
+      <description>
+        <ul>
+          <li>Roblox 2.744.1081 opens and plays again</li>
+          <li>A Roblox update that needs an Android function Stud doesn't have yet no longer stops the game from opening</li>
+        </ul>
+      </description>
+    </release>
+    <release version="1.2.2" date="2026-10-22">
+      <description>
+        <ul>
+          <li>Leaving a game, from the menu or by closing the window, no longer freezes Stud</li>
+          <li>The camera and cursor no longer stop for a moment every second</li>
+          <li>Audio no longer waits for the renderer, so a busy frame is no longer a gap in the sound</li>
+          <li>Pasting a script keeps every line, and a very long line no longer crashes Stud</li>
+          <li>F11 toggles fullscreen</li>
+          <li>The AppImage's login page no longer crashes</li>
+          <li>Stud is now a Nix flake</li>
+        </ul>
+      </description>
+    </release>
+    <release version="1.2.1" date="2026-10-06">
+      <description>
+        <ul>
+          <li>Big performance improvements: the game waits on Stud's renderer far less every frame</li>
+          <li>GameMode switch in Settings</li>
+          <li>Leaving first person while holding a mouse button no longer teleports the cursor</li>
+          <li>An unfocused Stud window no longer grabs or moves your mouse</li>
+          <li>X11 mouse look is no longer twice as sensitive as on Wayland</li>
+          <li>Stud warns you when the imported Roblox build is out of date</li>
+        </ul>
+      </description>
+    </release>
+    <release version="1.2.0" date="2026-10-04">
+      <description>
+        <ul>
+          <li>NVIDIA Freezes are GONE!</li>
+          <li>Stud presents the game's frames itself, on Wayland and on X11</li>
+          <li>No more lag on launching stud</li>
+          <li>No black flashes on X11 when a game opens</li>
+          <li>Mouse lock and the captured pointer behave the way the game expects</li>
+          <li>ANGLE is gone</li>
+        </ul>
+      </description>
+    </release>
+    <release version="1.1.11" date="2026-10-02">
+      <description>
+        <ul>
+          <li>Resizing, maximizing and restoring the window is smooth on Wayland and X11</li>
+          <li>Fixed a leak that made Stud slower the longer it ran</li>
+          <li>The AppImage now carries everything it needs, glibc and graphics drivers included, and runs on FUSE-less systems</li>
+          <li>The AppImage can update itself in place with AppImageUpdate and other updaters</li>
+        </ul>
+      </description>
+    </release>
+    <release version="1.1.10" date="2026-09-30">
+      <description>
+        <ul>
+          <li>Settings opens even on a machine with no Vulkan loader</li>
+          <li>The AppImage runs on stock distributions under X11</li>
+          <li>Software centers show Stud's icon and what changed in each release</li>
+          <li>A large internal cleanup, with no change in how Stud behaves</li>
+        </ul>
+      </description>
+    </release>
+  </releases>
+</component>

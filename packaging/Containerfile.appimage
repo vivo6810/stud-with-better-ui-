@@ -1,0 +1,23 @@
+# The image the AppImage is built in.
+#
+# Arch, because that is what quick-sharun (packaging/build-appimage.sh) is
+# written against: it finds libraries, Qt plugins and drivers at Arch's
+# paths, and its authors call building on anything else a bad idea. The
+# AppImage carries every library it needs, glibc included, so the base's
+# age is no floor on the machines that run it.
+#
+# A current Qt and KF6 Breeze come with it: a widget style can only load
+# into the Qt it was built against, so the bundle has to carry its own.
+FROM docker.io/library/archlinux:latest
+
+RUN pacman -Syu --noconfirm --needed \
+        base-devel cmake ninja git python curl zstd nasm vulkan-headers \
+        rust shaderc sdl3 ffmpeg \
+        qt6-base qt6-wayland breeze wpewebkit bubblewrap xdg-dbus-proxy \
+        vulkan-icd-loader libglvnd mesa libx11 libxext libxi libxrandr \
+        libxcursor libxfixes libxss wayland libxkbcommon libxkbcommon-x11 libdecor \
+        systemd-libs pipewire libpulse alsa-lib libsecret \
+        patchelf strace xorg-server-xvfb desktop-file-utils zsync wget \
+    && pacman -Scc --noconfirm
+
+WORKDIR /src

@@ -1,0 +1,78 @@
+# Maintainer: CatPieLeaf <catpieleaf@proton.me>
+#
+# The package published to the AUR. Installs the release archive and rebuilds only
+# the launcher against Arch's Qt: Arch builds Qt with indirect external access, so a
+# launcher linked against Fedora's Qt fails with a copy relocation error. Rosemary
+# links no Qt and is used as shipped. See packaging/aur/README.md.
+
+pkgname=stud-bin
+_pkgname=stud
+pkgver=2.0.8
+pkgrel=1
+pkgdesc="Play and create games on Roblox"
+arch=('x86_64')
+url="https://github.com/CatPieLeaf/Stud"
+license=('AGPL-3.0-or-later')
+provides=("$_pkgname=$pkgver")
+conflicts=("$_pkgname")
+# Must match the source PKGBUILD's list.
+depends=(
+  'gamemode'
+  'qt6-base'
+  'wpewebkit'
+  'sdl3'
+  'vulkan-icd-loader'
+  'curl'
+  'openssl'
+  'libsecret'
+  'zlib'
+  'libxkbcommon'
+  'systemd-libs'
+  'glibc'
+  'gcc-libs'
+  'hicolor-icon-theme'
+  'ffmpeg'
+)
+optdepends=(
+  'mangohud: the performance overlay Stud can switch on in Settings'
+)
+# Prebuilt binaries keep their symbols.
+options=(!strip !debug emptydirs)
+makedepends=(
+  'cmake'
+  'ninja'
+  'git'
+)
+# The source tarball is only for building the launcher.
+source=("$pkgname-$pkgver.tar.zst::$url/releases/download/$pkgver/stud-$pkgver-$CARCH.tar.zst"
+        "$_pkgname-$pkgver.tar.gz::$url/archive/refs/tags/$pkgver.tar.gz")
+# Filled in at release time (updpkgsums or the release workflow's output).
+sha256sums=('0e7a038e3fa2d281ad532f24618b0678b5aa8487059982331917b4ebc771b9bd'
+            '27d6d02baf74627d443a536eafe6e32f2f6d7e504604ca0cad050eefced4bc73')
+
+build() {
+  # Only the launcher; Rosemary comes from the archive.
+  cmake -S "Stud-$pkgver" -B build -G Ninja \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DSTUD_BUILD_ROSEMARY=OFF \
+    -DSTUD_BUILD_TESTS=OFF \
+    -DSTUD_VERSION="$pkgver"
+  cmake --build build
+}
+
+package() {
+  # The archive is the install tree rooted at usr/.
+  cp -a usr "$pkgdir"/
+
+  # Arch has no /usr/libexec; stud-ui looks for Rosemary in lib/stud too.
+  if [ -d "$pkgdir/usr/libexec/stud" ]; then
+    mkdir -p "$pkgdir/usr/lib"
+    cp -a "$pkgdir/usr/libexec/stud" "$pkgdir/usr/lib/stud-helpers"
+    cp -a "$pkgdir/usr/lib/stud-helpers/." "$pkgdir/usr/lib/stud/"
+    rm -rf "$pkgdir/usr/lib/stud-helpers" "$pkgdir/usr/libexec"
+  fi
+
+  # Replace the archive's launcher, built against Fedora's Qt.
+  install -Dm755 build/ui/stud-ui "$pkgdir/usr/bin/stud"
+}

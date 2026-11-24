@@ -1,0 +1,100 @@
+name: Bug report
+description: Something went wrong while running Stud
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before you file this, update Stud to the newest release and check the problem still happens there. Search the open issues too; if yours is already there, add your logs to it instead.
+
+        **Logs are required.** Without them a bug can almost never be found, and a report without logs will likely be ignored until they are added.
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you've done that triggered a bug?
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: The shortest way to make it happen again. Provide a link of the game if possible.
+      placeholder: |
+        1. Open Roblox from Stud
+        2. Join any game
+        3. Hold W and right-click to turn the camera
+    validations:
+      required: true
+
+  - type: dropdown
+    id: frequency
+    attributes:
+      label: How often does it happen
+      options:
+        - Every time
+        - Often
+        - Sometimes
+        - It happened once
+    validations:
+      required: true
+
+  - type: dropdown
+    id: install
+    attributes:
+      label: How did you install Stud
+      options:
+        - rpm
+        - deb
+        - Arch package or AUR
+        - AppImage
+        - Flatpak
+        - cpak
+        - built from source
+    validations:
+      required: true
+
+  - type: input
+    id: system
+    attributes:
+      label: Distribution, desktop and session
+      placeholder: Fedora 45, KDE Plasma 6.8.3, Wayland
+    validations:
+      required: true
+
+  - type: input
+    id: gpu
+    attributes:
+      label: GPU and driver
+      placeholder: NVIDIA RTX 3050, Nvidia Proprietary Driver 610.57.04
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: |
+        Make the problem happen, then in Stud open **Settings → Debug → Export logs** (also in the tray menu) and drag the `.tar.gz` it saves into this box.
+        If Stud won't open, attach the newest file from `~/.local/state/stud/logs`, or `~/.var/app/io.github.catpieleaf.Stud/.local/state/stud/logs` for the Flatpak.
+      placeholder: Drag the exported logs here.
+    validations:
+      required: true
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else
+      description: Screenshots, a video, or something you tried that changed it.
+
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: Before submitting
+      options:
+        - label: I'm on the newest Stud release.
+          required: true
+        - label: I attached logs from a session where the problem happened.
+          required: true

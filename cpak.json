@@ -1,0 +1,80 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Containerpak/cpak/v2/schema/manifest-v3.json",
+  "manifest_version": "3.0",
+  "name": "Stud",
+  "description": "Play and create games on Roblox",
+  "version": "2.0.8",
+  "image": "ghcr.io/catpieleaf/stud@sha256:88be29fa35d221fa62832aa204c5cc6f53abc2e8d40a512bf0d1474c1c49f917",
+  "binaries": [
+    "/usr/bin/stud"
+  ],
+  "desktop_entries": [
+    "/usr/share/applications/io.github.catpieleaf.Stud.desktop"
+  ],
+  "form_factors": [
+    "desktop"
+  ],
+  "services": {},
+  "dependencies": [],
+  "addons": [],
+  "idle_time": 0,
+  "override": {
+    "socketWayland": true,
+    "socketPulseAudio": true,
+    "deviceDri": true,
+    "deviceShm": true,
+    "notification": true,
+    "openURI": true,
+    "network": true,
+    "filePicker": {
+      "openFile": true,
+      "openFolder": true,
+      "saveFile": true,
+      "persistent": true
+    },
+    "filesystem": [
+      {
+        "path": "xdg-download",
+        "access": "read-only"
+      },
+      {
+        "path": "home/.config/kdeglobals",
+        "access": "read-only"
+      }
+    ],
+    "sessionBus": {
+      "talk": [
+        {
+          "name": "org.kde.StatusNotifierWatcher",
+          "path": "/StatusNotifierWatcher",
+          "interface": "org.kde.StatusNotifierWatcher",
+          "members": [
+            "RegisterStatusNotifierItem",
+            "RegisterStatusNotifierHost"
+          ]
+        },
+        {
+          "name": "org.kde.StatusNotifierWatcher",
+          "path": "/StatusNotifierWatcher",
+          "interface": "org.freedesktop.DBus.Properties",
+          "members": [
+            "Get",
+            "GetAll",
+            "PropertiesChanged"
+          ]
+        },
+        {
+          "name": "org.freedesktop.Notifications",
+          "path": "/org/freedesktop/Notifications",
+          "interface": "org.freedesktop.Notifications",
+          "members": [
+            "Notify"
+          ]
+        }
+      ],
+      "own": [
+        "org.kde.StatusNotifierItem-"
+      ]
+    }
+  }
+}
