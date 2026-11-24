@@ -516,6 +516,7 @@ void SettingsWindow::installResets() {
         [this, d] { serverRegionCheck_->setChecked(d.server_region_notification); });
     add(historyGamesCheck_, [this, d] { historyGamesCheck_->setChecked(d.record_game_history); });
     add(historyServersCheck_, [this, d] { historyServersCheck_->setChecked(d.record_server_history); });
+    add(reduceMotionCheck_, [this] { reduceMotionCheck_->setChecked(false); });
     add(trayCheck_, [this, d] { trayCheck_->setChecked(d.system_tray); });
     add(playerDirectlyCheck_, [this, d] { playerDirectlyCheck_->setChecked(d.open_player_directly); });
     add(cleanerSpin_, [this, d] { cleanerSpin_->setValue(d.cleaner_days); });
@@ -1535,6 +1536,7 @@ bool SettingsWindow::onSaveClicked() {
             statusLabel_->setText(QStringLiteral("Player settings saved, but the motion preference could not be saved."));
             return false;
         }
+        qApp->setProperty("studReducedMotion", reduceMotionCheck_->isChecked());
         statusLabel_->setText(stud_session_is_running()
                                   ? "Settings saved. They apply the next time Roblox starts."
                                   : "Settings saved.");

@@ -93,6 +93,26 @@ private:
     QSet<QUrl> requested_;
 };
 
+// GitHub tags are case-sensitive; support both common version conventions.
+void fetch_release_notes(QNetworkAccessManager* net, const QString& tag,
+                         const std::function<void(QNetworkReply*)>& done, bool allow_prefix = true) {
+    QNetworkRequest request(QUrl(QStringLiteral("https://api.github.com/repos/vivo6810/stud-with-better-ui-/releases/tags/%1")
+                                     .arg(QString::fromLatin1(QUrl::toPercentEncoding(tag)))));
+    request.setHeader(QNetworkRequest::UserAgentHeader, QStringLiteral("Stud/" STUD_VERSION));
+    request.setRawHeader("Accept", "application/vnd.github.html+json");
+    request.setTransferTimeout(10000);
+    QNetworkReply* reply = net->get(request);
+    QObject::connect(reply, &QNetworkReply::finished, net, [net, reply, tag, done, allow_prefix] {
+        if (allow_prefix && reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt() == 404) {
+            reply->deleteLater();
+            const QString alternative = tag.startsWith(QLatin1Char('v')) ? tag.mid(1) : QLatin1Char('v') + tag;
+            fetch_release_notes(net, alternative, done, false);
+            return;
+        }
+        done(reply);
+    });
+}
+
 void show_release_notes(QWidget* parent) {
     auto* dialog = new QDialog(parent);
     dialog->setAttribute(Qt::WA_DeleteOnClose);
@@ -116,13 +136,7 @@ void show_release_notes(QWidget* parent) {
     dialog->show();
 
     auto* net = new QNetworkAccessManager(dialog);
-    QNetworkRequest request(QUrl(QStringLiteral("https://api.github.com/repos/vivo6810/stud-with-better-ui-/releases/tags/%1")
-                                     .arg(QStringLiteral(STUD_VERSION))));
-    request.setHeader(QNetworkRequest::UserAgentHeader, QStringLiteral("Stud/" STUD_VERSION));
-    request.setRawHeader("Accept", "application/vnd.github.html+json");
-    request.setTransferTimeout(10000);
-    QNetworkReply* reply = net->get(request);
-    QObject::connect(reply, &QNetworkReply::finished, notes, [reply, notes, skeleton, status, dialog, layout] {
+    fetch_release_notes(net, QStringLiteral(STUD_VERSION), [notes, skeleton, status, dialog, layout](QNetworkReply* reply) {
         skeleton->hide();
         status->hide();
         notes->show();

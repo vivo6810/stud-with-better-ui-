@@ -6,8 +6,12 @@
 namespace stud::ui {
 
 inline bool reduced_motion() {
-    return QSettings(QStringLiteral("Stud"), QStringLiteral("Interface"))
+    if (qApp && qApp->property("studReducedMotion").isValid())
+        return qApp->property("studReducedMotion").toBool();
+    const bool reduced = QSettings(QStringLiteral("Stud"), QStringLiteral("Interface"))
         .value(QStringLiteral("reduceMotion"), false).toBool();
+    if (qApp) qApp->setProperty("studReducedMotion", reduced);
+    return reduced;
 }
 
 inline void apply_launcher_theme(QApplication& app) {

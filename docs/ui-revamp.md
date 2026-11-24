@@ -43,3 +43,13 @@ reference but the release workflow no longer publishes those formats.
 Static checks are recorded in the implementation response. No compiled or visual
 validation was possible because CMake and Qt tooling are absent here. The Linux
 validation checklist above must pass before release.
+
+## Follow-up fixes
+
+Reduced motion participates in Reset all and right-click reset. Its saved value
+is cached for rendering. The loading screen reserves skeleton space, uses one
+cancel path for its button/Close/Escape, and keeps a persistent elapsed-duration
+hint rather than resetting it on every progress report. Release notes try both
+bare and v-prefixed version tags on a missing-tag response. Download writes
+reject short writes before commit. The offscreen loading lifecycle regression
+is part of AppImage CI; native and visual verification remain required.

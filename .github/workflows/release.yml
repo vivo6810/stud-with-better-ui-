@@ -66,11 +66,11 @@ jobs:
           chmod +x "$appimage"
           ( cd /tmp && "$OLDPWD/$appimage" --appimage-extract >/dev/null )
           python3 tools/validate-payload.py /tmp/squashfs-root --label "AppImage"
-      - name: Test Studio association migration
+      - name: Test desktop migration and loading lifecycle
         run: |
           cmake -S . -B build-appimage -DSTUD_BUILD_TESTS=ON
-          cmake --build build-appimage --target stud_studio_associations_test
-          ctest --test-dir build-appimage -R '^studio_associations_test$' --output-on-failure --no-tests=error
+          cmake --build build-appimage --target stud_studio_associations_test stud_loading_screen_test
+          ctest --test-dir build-appimage -R '^(studio_associations|loading_screen)_test$' --output-on-failure --no-tests=error
 
       - name: Archive matching source code
         run: git archive --format=zip --prefix=Stud/ --output=build-appimage/packages/sourcecode.zip HEAD

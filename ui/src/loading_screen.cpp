@@ -4,6 +4,9 @@
 #include "motion.h"
 
 #include <QCoreApplication>
+#include <QCloseEvent>
+#include <QKeyEvent>
+#include <algorithm>
 #include <QFile>
 #include <QLabel>
 #include <QProgressBar>
@@ -34,6 +37,7 @@ struct Screen {
     bool lines_on = false;
     bool text_on = false;
     bool cancelled = false;
+    bool slow_shown = false;
     std::function<void()> on_cancel;
 };
 
@@ -42,14 +46,45 @@ Screen& screen() {
     return s;
 }
 
-// The window's width, as it always was; its height is what the contents need
-// at that width, so lines wrap rather than widen it, and it cannot be resized.
+void request_cancel() {
+    Screen& s = screen();
+    if (s.cancelled || !s.on_cancel) return;
+    s.cancelled = true;
+    auto on_cancel = std::move(s.on_cancel);
+    QTimer::singleShot(0, qApp, [on_cancel] {
+        close_loading_screen();
+        if (on_cancel) on_cancel();
+    });
+}
+
+class LoadingWindow : public QWidget {
+public:
+    LoadingWindow() : QWidget(nullptr, Qt::Dialog) {}
+protected:
+    void closeEvent(QCloseEvent* event) override {
+        if (screen().on_cancel || screen().cancelled) {
+            event->ignore();
+            request_cancel();
+        } else {
+            QWidget::closeEvent(event);
+        }
+    }
+    void keyPressEvent(QKeyEvent* event) override {
+        if (event->key() == Qt::Key_Escape && screen().on_cancel) {
+            request_cancel();
+            event->accept();
+        } else {
+            QWidget::keyPressEvent(event);
+        }
+    }
+};
+
 constexpr int kWidth = 460;
 
 void fit() {
     Screen& s = screen();
     if (s.window == nullptr) return;
-    s.window->setFixedSize(kWidth, s.window->layout()->totalHeightForWidth(kWidth));
+    s.window->setFixedSize(kWidth, std::max(s.window->minimumHeight(), s.window->layout()->totalHeightForWidth(kWidth)));
 }
 
 void next_line() {
@@ -67,7 +102,7 @@ void raise() {
     Screen& s = screen();
     if (s.window == nullptr) {
         // A dialog of a fixed size: tiling window managers float both.
-        s.window = std::make_unique<QWidget>(nullptr, Qt::Dialog);
+        s.window = std::make_unique<LoadingWindow>();
         s.window->setWindowTitle(QStringLiteral("Stud"));
         auto* layout = new QVBoxLayout(s.window.get());
         layout->setContentsMargins(28, 28, 28, 28);
@@ -84,19 +119,25 @@ void raise() {
         s.label = new QLabel(s.window.get());
         s.label->setAlignment(Qt::AlignCenter);
         s.label->setWordWrap(true);
+        s.label->setMinimumHeight(s.label->fontMetrics().lineSpacing() * 3);
         layout->addWidget(s.label);
         // A moving bar while nobody knows how far along it is; a progress bar
         // while something says (a download, the unpacking).
         s.skeleton = new Skeleton(s.window.get());
+        auto skeletonPolicy = s.skeleton->sizePolicy();
+        skeletonPolicy.setRetainSizeWhenHidden(true);
+        s.skeleton->setSizePolicy(skeletonPolicy);
         layout->addWidget(s.skeleton);
         s.hint = new QLabel(QStringLiteral("Preparing Roblox Player…"), s.window.get());
         s.hint->setWordWrap(true);
+        s.hint->setMinimumHeight(s.hint->fontMetrics().lineSpacing() * 5);
         s.hint->setAlignment(Qt::AlignCenter);
         layout->addWidget(s.hint);
         s.slow = new QTimer(s.window.get());
         s.slow->setSingleShot(true);
         s.slow->setInterval(8000);
         QObject::connect(s.slow, &QTimer::timeout, s.window.get(), [] {
+            screen().slow_shown = true;
             screen().hint->setText(QStringLiteral("Taking longer than usual. If a download is in progress, your connection may be slow. You can cancel and try again."));
             fit();
         });
@@ -107,16 +148,7 @@ void raise() {
         layout->addWidget(s.bar);
         s.cancel = new QPushButton(QStringLiteral("Cancel"), s.window.get());
         s.cancel->hide();
-        QObject::connect(s.cancel, &QPushButton::clicked, s.window.get(), []() {
-            Screen& screen_ = screen();
-            screen_.cancelled = true;
-            // Taken before the window goes: closing it destroys this button.
-            std::function<void()> on_cancel = std::move(screen_.on_cancel);
-            QTimer::singleShot(0, qApp, [on_cancel]() {
-                close_loading_screen();
-                if (on_cancel) on_cancel();
-            });
-        });
+        QObject::connect(s.cancel, &QPushButton::clicked, s.window.get(), request_cancel);
         layout->addWidget(s.cancel, 0, Qt::AlignHCenter);
         fit();
         s.timer = new QTimer(s.window.get());
@@ -146,6 +178,7 @@ void show_loading_lines(std::function<void()> on_cancel) {
     s.cancelled = false;
     s.lines_on = true;
     raise();
+    if (!s.window || s.cancelled) return;
     s.cancel->setVisible(s.on_cancel != nullptr);
     fit();
     next_line();
@@ -158,6 +191,7 @@ void show_loading_text(const QString& text) {
     Screen& s = screen();
     s.text_on = true;
     raise();
+    if (!s.window || s.cancelled) return;
     s.label->setText(text);
     fit();
     QCoreApplication::processEvents();
@@ -168,8 +202,7 @@ void set_loading_progress(int percent) {
     if (s.bar == nullptr) return;
     s.skeleton->setVisible(percent < 0);
     fit();
-    if (percent >= 0) {
-        s.slow->start();
+    if (percent >= 0 && !s.slow_shown) {
         s.hint->setText(QStringLiteral("Preparing Roblox Player · %1%").arg(percent));
     }
     if (percent < 0) {
@@ -204,6 +237,8 @@ void close_loading_screen() {
     s.skeleton = nullptr;
     s.hint = nullptr;
     s.slow = nullptr;
+    s.slow_shown = false;
+    s.on_cancel = {};
 }
 
 }  // namespace stud::ui
